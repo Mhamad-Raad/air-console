@@ -1,10 +1,22 @@
+export type Team = 'A' | 'B';
+export type Locale = 'en' | 'ar';
+
 export interface Player {
   id: string;
   name: string;
   socketId?: string;
-  team?: string;
+  team?: Team | null;
+  isReady: boolean;
   isHost: boolean;
+  locale: Locale;
   joinedAt: number;
+}
+
+export interface PlayerPatch {
+  name?: string;
+  team?: Team | null;
+  isReady?: boolean;
+  locale?: Locale;
 }
 
 export type RoomPhase = 'lobby' | 'in_game' | 'ended';

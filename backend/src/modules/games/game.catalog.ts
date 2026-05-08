@@ -8,6 +8,8 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     description: 'Classic dominos with team play.',
     minPlayers: 2,
     maxPlayers: 4,
+    supportsTeams: true,
+    requireReady: true,
     enabled: true,
   },
 ];
