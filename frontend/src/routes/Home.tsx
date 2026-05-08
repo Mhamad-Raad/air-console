@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
-import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
+import { RouteHeader } from '../components/ui/RouteHeader';
 import type { GameCatalogEntry, Room } from '../types';
 
 export default function Home() {
@@ -33,13 +33,14 @@ export default function Home() {
 
   return (
     <main className="mx-auto max-w-4xl p-8">
-      <header className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{t('common.appName')}</h1>
-          <p className="mt-2 text-white/60">{t('home.tagline')}</p>
-        </div>
-        <LanguageSwitcher />
-      </header>
+      <RouteHeader
+        center={
+          <div className="text-start">
+            <h1 className="text-3xl font-bold">{t('common.appName')}</h1>
+            <p className="mt-2 text-white/60">{t('home.tagline')}</p>
+          </div>
+        }
+      />
 
       <section className="mt-8 grid gap-4 sm:grid-cols-2">
         {loading && <p className="text-white/60">{t('common.loading')}</p>}

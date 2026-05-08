@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
-import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
+import { RouteHeader } from '../components/ui/RouteHeader';
 
 const nameKey = (code: string) => `air-console:room:${code}:name`;
 
@@ -21,22 +21,18 @@ export default function Join() {
   }
 
   return (
-    <main className="mx-auto flex min-h-full max-w-sm flex-col justify-center gap-6 p-6">
-      <header className="flex items-start justify-between gap-2">
-        <button
-          onClick={() => navigate('/')}
-          className="rounded-lg bg-surface px-3 py-1.5 text-sm text-white/70 hover:bg-white/10"
-        >
-          <span aria-hidden>←</span> {t('common.back')}
-        </button>
-        <div className="flex-1 text-center">
-          <p className="text-sm uppercase tracking-widest text-white/40">{t('join.joining')}</p>
-          <h1 className="mt-1 text-4xl font-extrabold">{code}</h1>
-        </div>
-        <LanguageSwitcher />
-      </header>
+    <main className="mx-auto flex min-h-full max-w-sm flex-col gap-6 p-6">
+      <RouteHeader
+        onBack={() => navigate('/')}
+        center={
+          <>
+            <p className="text-sm uppercase tracking-widest text-white/40">{t('join.joining')}</p>
+            <h1 className="mt-1 text-4xl font-extrabold">{code}</h1>
+          </>
+        }
+      />
 
-      <form className="space-y-4" onSubmit={submit}>
+      <form className="mt-auto mb-auto space-y-4" onSubmit={submit}>
         <label className="block">
           <span className="text-sm text-white/70">{t('join.yourName')}</span>
           <input
