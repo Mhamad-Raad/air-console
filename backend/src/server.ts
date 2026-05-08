@@ -4,6 +4,8 @@ import helmet from '@fastify/helmet';
 import sensible from '@fastify/sensible';
 import { env, corsOrigins } from './config/env.js';
 import errorHandler from './plugins/errorHandler.js';
+import roomsModule from './modules/rooms/index.js';
+import gamesModule from './modules/games/index.js';
 
 export async function buildServer(): Promise<FastifyInstance> {
   const app = Fastify({
@@ -29,6 +31,9 @@ export async function buildServer(): Promise<FastifyInstance> {
   await app.register(errorHandler);
 
   app.get('/health', async () => ({ status: 'ok', uptime: process.uptime() }));
+
+  await app.register(gamesModule);
+  await app.register(roomsModule);
 
   return app;
 }
