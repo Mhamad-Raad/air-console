@@ -26,7 +26,21 @@ We are **not** trying to clone AirConsole's full library. We're replicating the 
 
 ## Current state (as of 2026-05-08)
 
-**Phase 1 — Lobby completion + bilingual shell: ✅ DONE**
+**Phase 1 — Lobby completion + bilingual shell: ✅ DONE (incl. polish pass)**
+
+Polish pass that landed after the first review:
+
+- Backend handler boilerplate extracted: `requireHost`, `runHandler`, and a `broadcastState` that accepts a freshly-written room (cuts Redis traffic ~50% on hot paths).
+- Disconnect-during-join race fixed (socket context set before write).
+- Dead `Player.isHost` field removed (host tracked via `Room.hostSocketId`).
+- Frontend event-name strings replaced with imported constants from `lib/events.ts`.
+- New hooks: `useSocketEvent`, `useEmit`, `useRoom`, `useMe`.
+- New UI primitives: `InlineConfirm`, `Pill`, `StatusDot`, `RouteHeader`.
+- Controller's `useEffect` split — language change no longer triggers leave/rejoin.
+- `storedName` is proper React state; default name is localised (`controller.defaultName`).
+- Host's "leave room" no longer double-navigates (timeout cleared on ack).
+- Magic numbers consolidated in `backend/src/config/constants.ts` and `frontend/src/lib/constants.ts`.
+- Three locales: English, Arabic, Kurdish Sorani — all RTL-aware.
 
 Working end-to-end:
 
