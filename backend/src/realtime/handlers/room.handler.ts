@@ -13,194 +13,154 @@ import { RoomService } from '../../modules/rooms/room.service.js';
 import { JoinRoomSchema, PlayerPatchSchema } from '../../modules/rooms/room.schema.js';
 import { getIO } from '../socket.js';
 import type { AppSocket } from '../socketContext.js';
-
-type Ack = (res: { ok: boolean; error?: string; room?: unknown; playerId?: string }) => void;
-
-const channel = (code: string) => `room:${code}`;
-
-async function broadcastState(code: string): Promise<void> {
-  const room = await RoomService.get(code).catch(() => null);
-  if (room) getIO().to(channel(code)).emit(ServerEvents.RoomState, room);
-}
+import { broadcastState, channel, requireHost, runHandler, type Ack } from './utils.js';
 
 export function registerRoomHandlers(socket: AppSocket): void {
-  socket.on(ClientEvents.HostClaim, async (payload: HostClaimPayload, ack?: Ack) => {
-    const code = payload.code?.toUpperCase();
-    if (!code) return ack?.({ ok: false, error: 'Missing code' });
-    try {
-      const room = await RoomService.setHost(code, socket.id);
+  socket.on(ClientEvents.HostClaim, (payload: HostClaimPayload, ack?: Ack) =>
+    runHandler('host:claim', async () => {
+      const code = payload?.code?.toUpperCase();
+      if (!code) throw new Error('Missing code');
+      // Set context first so a disconnect mid-write still cleans up.
       socket.data.code = code;
       socket.data.role = 'host';
+      const room = await RoomService.setHost(code, socket.id);
       await socket.join(channel(code));
-      ack?.({ ok: true, room });
-      await broadcastState(code);
-    } catch (err) {
-      logger.warn({ err, code }, 'host:claim failed');
-      ack?.({ ok: false, error: 'Room not found' });
-    }
-  });
+      await broadcastState(code, room);
+      return { room };
+    }, ack),
+  );
 
-  socket.on(ClientEvents.RoomJoin, async (raw: JoinRoomPayload, ack?: Ack) => {
-    try {
-      const payload = JoinRoomSchema.parse({ ...raw, code: raw.code?.toUpperCase() });
+  socket.on(ClientEvents.RoomJoin, (raw: JoinRoomPayload, ack?: Ack) =>
+    runHandler('room:join', async () => {
+      const payload = JoinRoomSchema.parse({ ...raw, code: raw?.code?.toUpperCase() });
       const playerId = payload.playerId ?? nanoid();
+      // Set context first so a disconnect mid-write still cleans up the player.
+      socket.data.code = payload.code;
+      socket.data.role = 'player';
+      socket.data.playerId = playerId;
       const room = await RoomService.addPlayer(payload.code, {
         id: playerId,
         name: payload.name,
         socketId: socket.id,
-        isHost: false,
       });
-
-      socket.data.code = payload.code;
-      socket.data.role = 'player';
-      socket.data.playerId = playerId;
       await socket.join(channel(payload.code));
+      await broadcastState(payload.code, room);
+      return { room, playerId };
+    }, ack),
+  );
 
-      ack?.({ ok: true, room, playerId });
-      await broadcastState(payload.code);
-    } catch (err) {
-      logger.warn({ err }, 'room:join failed');
-      const message = err instanceof Error ? err.message : 'Failed to join room';
-      socket.emit(ServerEvents.RoomError, { message });
-      ack?.({ ok: false, error: message });
-    }
-  });
+  socket.on(ClientEvents.RoomLeave, () =>
+    runHandler('room:leave', async () => {
+      const { code, role, playerId } = socket.data;
+      if (!code) return;
+      if (role === 'player' && playerId) {
+        const room = await RoomService.removePlayer(code, playerId);
+        if (room) await broadcastState(code, room);
+      }
+      await socket.leave(channel(code));
+      socket.data = {};
+    }),
+  );
 
-  socket.on(ClientEvents.RoomLeave, async () => {
-    const { code, role, playerId } = socket.data;
-    if (!code) return;
-    if (role === 'player' && playerId) {
-      await RoomService.removePlayer(code, playerId);
-      await broadcastState(code);
-    }
-    await socket.leave(channel(code));
-    socket.data = {};
-  });
+  socket.on(ClientEvents.RoomKick, (payload: KickPayload, ack?: Ack) =>
+    runHandler('room:kick', async () => {
+      const ctx = requireHost(socket);
+      if (!ctx) throw new Error('Host only');
+      if (!payload?.playerId) throw new Error('Missing playerId');
 
-  socket.on(ClientEvents.RoomKick, async (payload: KickPayload, ack?: Ack) => {
-    const { code, role } = socket.data;
-    if (!code || role !== 'host') {
-      return ack?.({ ok: false, error: 'Only the host can kick players' });
-    }
-    if (!payload?.playerId) return ack?.({ ok: false, error: 'Missing playerId' });
+      const current = await RoomService.get(ctx.code);
+      const target = current.players.find((p) => p.id === payload.playerId);
+      if (!target) throw new Error('Player not in room');
 
-    try {
-      const room = await RoomService.get(code);
-      const target = room.players.find((p) => p.id === payload.playerId);
-      if (!target) return ack?.({ ok: false, error: 'Player not in room' });
-
-      await RoomService.removePlayer(code, payload.playerId);
+      const room = await RoomService.removePlayer(ctx.code, payload.playerId);
 
       // Notify the kicked socket directly so they can navigate home.
       if (target.socketId) {
         const kickedSocket = getIO().sockets.sockets.get(target.socketId);
         if (kickedSocket) {
-          kickedSocket.emit(ServerEvents.PlayerKicked, { code });
-          await kickedSocket.leave(channel(code));
+          kickedSocket.emit(ServerEvents.PlayerKicked, { code: ctx.code });
+          await kickedSocket.leave(channel(ctx.code));
           kickedSocket.data = {};
         }
       }
 
-      ack?.({ ok: true });
-      await broadcastState(code);
-    } catch (err) {
-      logger.warn({ err, code, playerId: payload.playerId }, 'room:kick failed');
-      ack?.({ ok: false, error: 'Failed to kick player' });
-    }
-  });
+      if (room) await broadcastState(ctx.code, room);
+    }, ack),
+  );
 
-  socket.on(ClientEvents.PlayerUpdate, async (payload: PlayerUpdatePayload, ack?: Ack) => {
-    const { code, playerId } = socket.data;
-    if (!code || !playerId) return ack?.({ ok: false, error: 'Not in a room' });
-    try {
+  socket.on(ClientEvents.PlayerUpdate, (payload: PlayerUpdatePayload, ack?: Ack) =>
+    runHandler('player:update', async () => {
+      const { code, playerId } = socket.data;
+      if (!code || !playerId) throw new Error('Not in a room');
       const patch = PlayerPatchSchema.parse(payload ?? {});
       const room = await RoomService.updatePlayer(code, playerId, patch);
-      ack?.({ ok: true, room });
-      await broadcastState(code);
-    } catch (err) {
-      logger.warn({ err, code, playerId }, 'player:update failed');
-      ack?.({ ok: false, error: 'Update failed' });
-    }
-  });
+      await broadcastState(code, room);
+      return { room };
+    }, ack),
+  );
 
   // Host updates another player (e.g. team assignment from the lobby UI).
-  socket.on(ClientEvents.PlayerSet, async (payload: PlayerSetPayload, ack?: Ack) => {
-    const { code, role } = socket.data;
-    if (!code || role !== 'host') return ack?.({ ok: false, error: 'Host only' });
-    if (!payload?.playerId) return ack?.({ ok: false, error: 'Missing playerId' });
-    try {
+  socket.on(ClientEvents.PlayerSet, (payload: PlayerSetPayload, ack?: Ack) =>
+    runHandler('player:set', async () => {
+      const ctx = requireHost(socket);
+      if (!ctx) throw new Error('Host only');
+      if (!payload?.playerId) throw new Error('Missing playerId');
       const patch = PlayerPatchSchema.parse(payload.patch ?? {});
-      const room = await RoomService.updatePlayer(code, payload.playerId, patch);
-      ack?.({ ok: true, room });
-      await broadcastState(code);
-    } catch (err) {
-      logger.warn({ err, code, target: payload.playerId }, 'player:set failed');
-      ack?.({ ok: false, error: 'Update failed' });
-    }
-  });
+      const room = await RoomService.updatePlayer(ctx.code, payload.playerId, patch);
+      await broadcastState(ctx.code, room);
+      return { room };
+    }, ack),
+  );
 
-  socket.on(ClientEvents.GameStart, async (_payload: unknown, ack?: Ack) => {
-    const { code, role } = socket.data;
-    if (!code || role !== 'host') return ack?.({ ok: false, error: 'Host only' });
-    try {
-      const room = await RoomService.startGame(code);
-      ack?.({ ok: true, room });
-      await broadcastState(code);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to start';
-      logger.warn({ err, code }, 'game:start failed');
-      ack?.({ ok: false, error: message });
-    }
-  });
+  socket.on(ClientEvents.GameStart, (_payload: unknown, ack?: Ack) =>
+    runHandler('game:start', async () => {
+      const ctx = requireHost(socket);
+      if (!ctx) throw new Error('Host only');
+      const room = await RoomService.startGame(ctx.code);
+      await broadcastState(ctx.code, room);
+      return { room };
+    }, ack),
+  );
 
-  socket.on(ClientEvents.RoomClose, async (_payload: unknown, ack?: Ack) => {
-    const { code, role } = socket.data;
-    if (!code || role !== 'host') return ack?.({ ok: false, error: 'Host only' });
-    try {
+  socket.on(ClientEvents.GameEnd, (_payload: unknown, ack?: Ack) =>
+    runHandler('game:end', async () => {
+      const ctx = requireHost(socket);
+      if (!ctx) throw new Error('Host only');
+      const room = await RoomService.endGame(ctx.code);
+      await broadcastState(ctx.code, room);
+      return { room };
+    }, ack),
+  );
+
+  socket.on(ClientEvents.RoomClose, (_payload: unknown, ack?: Ack) =>
+    runHandler('room:close', async () => {
+      const ctx = requireHost(socket);
+      if (!ctx) throw new Error('Host only');
       const io = getIO();
-      // Notify everyone in the room (including the host) so all clients can navigate home.
-      io.to(channel(code)).emit(ServerEvents.RoomClosed, { code });
+      // Notify everyone first so all clients can navigate home.
+      io.to(channel(ctx.code)).emit(ServerEvents.RoomClosed, { code: ctx.code });
       // Force every connected socket out of the channel and clear their context.
-      // We resolve from the local sockets map (mutable) rather than fetchSockets(),
-      // which returns RemoteSocket with read-only data.
-      const adapterRoom = io.sockets.adapter.rooms.get(channel(code));
+      const adapterRoom = io.sockets.adapter.rooms.get(channel(ctx.code));
       if (adapterRoom) {
         for (const id of adapterRoom) {
           const s = io.sockets.sockets.get(id);
           if (!s) continue;
-          await s.leave(channel(code));
+          await s.leave(channel(ctx.code));
           s.data = {};
         }
       }
-      await RoomService.deleteRoom(code);
-      ack?.({ ok: true });
-    } catch (err) {
-      logger.warn({ err, code }, 'room:close failed');
-      ack?.({ ok: false, error: 'Failed to close room' });
-    }
-  });
+      await RoomService.deleteRoom(ctx.code);
+    }, ack),
+  );
 
-  socket.on(ClientEvents.GameEnd, async (_payload: unknown, ack?: Ack) => {
-    const { code, role } = socket.data;
-    if (!code || role !== 'host') return ack?.({ ok: false, error: 'Host only' });
-    try {
-      const room = await RoomService.endGame(code);
-      ack?.({ ok: true, room });
-      await broadcastState(code);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to end';
-      logger.warn({ err, code }, 'game:end failed');
-      ack?.({ ok: false, error: message });
-    }
-  });
-
-  socket.on('disconnect', async () => {
+  socket.on('disconnect', async (reason) => {
+    logger.debug({ id: socket.id, reason }, 'socket disconnected');
     const { code, role, playerId } = socket.data;
     if (!code) return;
     if (role === 'player' && playerId) {
-      await RoomService.removePlayer(code, playerId);
-      await broadcastState(code);
+      const room = await RoomService.removePlayer(code, playerId);
+      if (room) await broadcastState(code, room);
     }
-    // Host disconnect: leave room alive (controllers may still be there).
+    // Host disconnect: leave room alive so reconnect or claim can pick it back up.
   });
 }

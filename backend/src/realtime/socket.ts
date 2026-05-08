@@ -22,13 +22,10 @@ export function attachSocketIO(app: FastifyInstance): AppServer {
 
   io.on('connection', (socket: AppSocket) => {
     logger.debug({ id: socket.id }, 'socket connected');
-
     registerRoomHandlers(socket);
     registerGameHandlers(socket);
-
-    socket.on('disconnect', (reason) => {
-      logger.debug({ id: socket.id, reason }, 'socket disconnected');
-    });
+    // Disconnect logging + cleanup live in registerRoomHandlers so all
+    // disconnect logic is in one place.
   });
 
   return io;

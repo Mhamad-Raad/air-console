@@ -7,7 +7,6 @@ export interface Player {
   socketId?: string;
   team?: Team | null;
   isReady: boolean;
-  isHost: boolean;
   locale: Locale;
   joinedAt: number;
 }

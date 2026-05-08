@@ -41,7 +41,9 @@ export const RoomService = {
 
   async addPlayer(
     code: string,
-    player: Omit<Player, 'joinedAt' | 'isReady' | 'locale'> & {
+    player: Pick<Player, 'id' | 'name'> & {
+      socketId?: string;
+      team?: Player['team'];
       isReady?: boolean;
       locale?: Player['locale'];
     },
