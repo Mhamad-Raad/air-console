@@ -11,3 +11,11 @@ export const JoinRoomSchema = z.object({
   playerId: z.string().optional(),
 });
 export type JoinRoomInput = z.infer<typeof JoinRoomSchema>;
+
+export const PlayerPatchSchema = z.object({
+  name: z.string().min(1).max(24).optional(),
+  team: z.enum(['A', 'B']).nullable().optional(),
+  isReady: z.boolean().optional(),
+  locale: z.enum(['en', 'ar']).optional(),
+});
+export type PlayerPatchInput = z.infer<typeof PlayerPatchSchema>;

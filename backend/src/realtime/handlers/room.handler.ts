@@ -5,11 +5,12 @@ import {
   type HostClaimPayload,
   type JoinRoomPayload,
   type KickPayload,
+  type PlayerSetPayload,
   type PlayerUpdatePayload,
 } from '../events.js';
 import { logger } from '../../lib/logger.js';
 import { RoomService } from '../../modules/rooms/room.service.js';
-import { JoinRoomSchema } from '../../modules/rooms/room.schema.js';
+import { JoinRoomSchema, PlayerPatchSchema } from '../../modules/rooms/room.schema.js';
 import { getIO } from '../socket.js';
 import type { AppSocket } from '../socketContext.js';
 
@@ -107,12 +108,48 @@ export function registerRoomHandlers(socket: AppSocket): void {
     }
   });
 
-  socket.on(ClientEvents.PlayerUpdate, async (payload: PlayerUpdatePayload) => {
+  socket.on(ClientEvents.PlayerUpdate, async (payload: PlayerUpdatePayload, ack?: Ack) => {
     const { code, playerId } = socket.data;
-    if (!code || !playerId) return;
-    // TODO: implement RoomService.updatePlayer when we extend Player
-    logger.debug({ code, playerId, payload }, 'player:update (todo)');
-    await broadcastState(code);
+    if (!code || !playerId) return ack?.({ ok: false, error: 'Not in a room' });
+    try {
+      const patch = PlayerPatchSchema.parse(payload ?? {});
+      const room = await RoomService.updatePlayer(code, playerId, patch);
+      ack?.({ ok: true, room });
+      await broadcastState(code);
+    } catch (err) {
+      logger.warn({ err, code, playerId }, 'player:update failed');
+      ack?.({ ok: false, error: 'Update failed' });
+    }
+  });
+
+  // Host updates another player (e.g. team assignment from the lobby UI).
+  socket.on(ClientEvents.PlayerSet, async (payload: PlayerSetPayload, ack?: Ack) => {
+    const { code, role } = socket.data;
+    if (!code || role !== 'host') return ack?.({ ok: false, error: 'Host only' });
+    if (!payload?.playerId) return ack?.({ ok: false, error: 'Missing playerId' });
+    try {
+      const patch = PlayerPatchSchema.parse(payload.patch ?? {});
+      const room = await RoomService.updatePlayer(code, payload.playerId, patch);
+      ack?.({ ok: true, room });
+      await broadcastState(code);
+    } catch (err) {
+      logger.warn({ err, code, target: payload.playerId }, 'player:set failed');
+      ack?.({ ok: false, error: 'Update failed' });
+    }
+  });
+
+  socket.on(ClientEvents.GameStart, async (_payload: unknown, ack?: Ack) => {
+    const { code, role } = socket.data;
+    if (!code || role !== 'host') return ack?.({ ok: false, error: 'Host only' });
+    try {
+      const room = await RoomService.startGame(code);
+      ack?.({ ok: true, room });
+      await broadcastState(code);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to start';
+      logger.warn({ err, code }, 'game:start failed');
+      ack?.({ ok: false, error: message });
+    }
   });
 
   socket.on('disconnect', async () => {

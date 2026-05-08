@@ -7,7 +7,7 @@ export const ClientEvents = {
   RoomLeave: 'room:leave',
   RoomKick: 'room:kick',
   PlayerUpdate: 'player:update',
-  TeamUpdate: 'team:update',
+  PlayerSet: 'player:set', // host changes another player (e.g. team assignment)
   GameStart: 'game:start',
   GameAction: 'game:action',
 } as const;
@@ -39,9 +39,23 @@ export interface KickPayload {
   playerId: string;
 }
 
+export type Team = 'A' | 'B';
+export type Locale = 'en' | 'ar';
+
 export interface PlayerUpdatePayload {
   name?: string;
-  avatar?: string;
+  team?: Team | null;
+  isReady?: boolean;
+  locale?: Locale;
+}
+
+export interface PlayerSetPayload {
+  playerId: string;
+  patch: PlayerUpdatePayload;
+}
+
+export interface GameStartPayload {
+  // intentionally empty for now — host's socket.data.code identifies the room
 }
 
 export interface GameActionPayload {
