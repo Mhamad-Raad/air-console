@@ -2,6 +2,7 @@
 // Naming: <namespace>:<action> for emits, <namespace>:<state> for broadcasts.
 
 export const ClientEvents = {
+  HostClaim: 'host:claim',
   RoomJoin: 'room:join',
   RoomLeave: 'room:leave',
   PlayerUpdate: 'player:update',
@@ -21,6 +22,10 @@ export const ServerEvents = {
 
 export type ClientEvent = (typeof ClientEvents)[keyof typeof ClientEvents];
 export type ServerEvent = (typeof ServerEvents)[keyof typeof ServerEvents];
+
+export interface HostClaimPayload {
+  code: string;
+}
 
 export interface JoinRoomPayload {
   code: string;
