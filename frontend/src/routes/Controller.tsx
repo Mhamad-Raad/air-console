@@ -36,12 +36,14 @@ export default function Controller() {
   useEffect(() => {
     if (!connected) return;
     const existingId = localStorage.getItem(PLAYER_ID_KEY) ?? undefined;
+    let didJoin = false;
 
     socket.emit(
       'room:join',
       { code, name: storedName, playerId: existingId },
       (res: { ok: boolean; error?: string; room?: Room; playerId?: string }) => {
         if (res?.ok && res.room) {
+          didJoin = true;
           setRoom(res.room);
           setJoined(true);
           if (res.playerId) {
@@ -51,7 +53,15 @@ export default function Controller() {
           // Sync locale to server so host/peers can see it.
           socket.emit('player:update', { locale: i18n.language as Locale });
         } else {
-          setError(res?.error ?? 'Failed to join');
+          const errMsg = res?.error ?? 'Failed to join';
+          // Room doesn't exist anymore — go home so the user can join a fresh one.
+          if (/not found/i.test(errMsg)) {
+            reset();
+            setError(t('controller.roomNotFound'));
+            setTimeout(() => navigate('/'), 1500);
+          } else {
+            setError(errMsg);
+          }
         }
       },
     );
@@ -69,6 +79,12 @@ export default function Controller() {
     return () => {
       socket.off('room:state', onState);
       socket.off('player:kicked', onKicked);
+      // Back-button or unmount: tell the server we're leaving so the host
+      // doesn't show a ghost player. Server-side disconnect cleanup also
+      // covers this when the tab actually closes.
+      if (didJoin && socket.connected) {
+        socket.emit('room:leave');
+      }
     };
   }, [connected, socket, code, storedName, setRoom, reset, navigate, t, i18n.language]);
 
