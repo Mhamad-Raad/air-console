@@ -2,131 +2,133 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSocket } from '../hooks/useSocket';
-import { useRoomStore } from '../stores/room.store';
+import { useSocketEvent } from '../hooks/useSocketEvent';
+import { useEmit } from '../hooks/useEmit';
+import { useMe, useRoom } from '../hooks/useRoom';
 import { Button } from '../components/ui/Button';
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
-import { setLocale, type Locale } from '../i18n';
+import { ClientEvents, ServerEvents } from '../lib/events';
+import { type Locale } from '../i18n';
 import type { Room } from '../types';
 
 const PLAYER_ID_KEY = 'air-console:playerId';
 const nameKey = (code: string) => `air-console:room:${code}:name`;
+const ROOM_NOT_FOUND_REDIRECT_MS = 1500;
 
 export default function Controller() {
   const { t, i18n } = useTranslation();
   const { code = '' } = useParams();
   const navigate = useNavigate();
   const { socket, connected } = useSocket();
-  const room = useRoomStore((s) => s.room);
-  const setRoom = useRoomStore((s) => s.setRoom);
-  const reset = useRoomStore((s) => s.reset);
+  const emit = useEmit();
+  const { room, setRoom, reset } = useRoom();
+  const me = useMe();
+
+  const [storedName, setStoredName] = useState(
+    () => localStorage.getItem(nameKey(code)) ?? '',
+  );
   const [joined, setJoined] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [playerId, setPlayerId] = useState<string | null>(
-    () => localStorage.getItem(PLAYER_ID_KEY),
-  );
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState('');
 
-  const storedName = localStorage.getItem(nameKey(code)) ?? 'Player';
-  const me = playerId ? room?.players.find((p) => p.id === playerId) : null;
-  const displayName = me?.name ?? storedName;
+  const displayName = me?.name ?? storedName ?? t('controller.defaultName');
   const isReady = me?.isReady ?? false;
   const team = me?.team ?? null;
 
+  // --- room:join lifecycle (does NOT depend on language) ---
   useEffect(() => {
     if (!connected) return;
-    const existingId = localStorage.getItem(PLAYER_ID_KEY) ?? undefined;
     let didJoin = false;
+    const initialName = (localStorage.getItem(nameKey(code)) ?? '').trim() || t('controller.defaultName');
+    const existingId = localStorage.getItem(PLAYER_ID_KEY) ?? undefined;
 
-    socket.emit(
-      'room:join',
-      { code, name: storedName, playerId: existingId },
-      (res: { ok: boolean; error?: string; room?: Room; playerId?: string }) => {
-        if (res?.ok && res.room) {
-          didJoin = true;
-          setRoom(res.room);
-          setJoined(true);
-          if (res.playerId) {
-            localStorage.setItem(PLAYER_ID_KEY, res.playerId);
-            setPlayerId(res.playerId);
-          }
-          // Sync locale to server so host/peers can see it.
-          socket.emit('player:update', { locale: i18n.language as Locale });
+    (async () => {
+      const res = await emit<{ room?: Room; playerId?: string; error?: string }>(
+        ClientEvents.RoomJoin,
+        { code, name: initialName, playerId: existingId },
+      );
+
+      if (res.ok && res.room) {
+        didJoin = true;
+        setRoom(res.room);
+        setJoined(true);
+        if (res.playerId) localStorage.setItem(PLAYER_ID_KEY, res.playerId);
+        // Sync the current locale to the server now that we're joined.
+        socket.emit(ClientEvents.PlayerUpdate, { locale: i18n.language as Locale });
+      } else {
+        const errMsg = res.error ?? 'Failed to join';
+        if (/not found/i.test(errMsg)) {
+          reset();
+          setError(t('controller.roomNotFound'));
+          setTimeout(() => navigate('/'), ROOM_NOT_FOUND_REDIRECT_MS);
         } else {
-          const errMsg = res?.error ?? 'Failed to join';
-          // Room doesn't exist anymore — go home so the user can join a fresh one.
-          if (/not found/i.test(errMsg)) {
-            reset();
-            setError(t('controller.roomNotFound'));
-            setTimeout(() => navigate('/'), 1500);
-          } else {
-            setError(errMsg);
-          }
+          setError(errMsg);
         }
-      },
-    );
-
-    const onState = (next: Room) => setRoom(next);
-    const onKicked = () => {
-      reset();
-      alert(t('controller.kicked'));
-      navigate('/');
-    };
-    const onRoomClosed = () => {
-      reset();
-      alert(t('controller.roomClosed'));
-      navigate('/');
-    };
-
-    socket.on('room:state', onState);
-    socket.on('player:kicked', onKicked);
-    socket.on('room:closed', onRoomClosed);
+      }
+    })();
 
     return () => {
-      socket.off('room:state', onState);
-      socket.off('player:kicked', onKicked);
-      socket.off('room:closed', onRoomClosed);
-      // Back-button or unmount: tell the server we're leaving so the host
-      // doesn't show a ghost player. Server-side disconnect cleanup also
-      // covers this when the tab actually closes.
+      // Back/unmount: tell the server we're leaving so the host doesn't see a ghost.
       if (didJoin && socket.connected) {
-        socket.emit('room:leave');
+        socket.emit(ClientEvents.RoomLeave);
       }
     };
-  }, [connected, socket, code, storedName, setRoom, reset, navigate, t, i18n.language]);
+    // i18n.language deliberately excluded — language change syncs via the
+    // separate effect below, not by re-joining the room.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connected, socket, code, emit, setRoom, reset, navigate, t]);
 
+  // --- locale sync (no leave/rejoin) ---
+  useEffect(() => {
+    if (!joined) return;
+    socket.emit(ClientEvents.PlayerUpdate, { locale: i18n.language as Locale });
+  }, [i18n.language, joined, socket]);
+
+  // --- server events ---
+  useSocketEvent<Room>(ServerEvents.RoomState, (next) => setRoom(next), [setRoom]);
+  useSocketEvent(ServerEvents.PlayerKicked, () => {
+    reset();
+    alert(t('controller.kicked'));
+    navigate('/');
+  }, [reset, navigate, t]);
+  useSocketEvent(ServerEvents.RoomClosed, () => {
+    reset();
+    alert(t('controller.roomClosed'));
+    navigate('/');
+  }, [reset, navigate, t]);
+
+  // --- actions ---
   function startEdit() {
     setDraftName(displayName);
     setEditing(true);
   }
 
-  function saveEdit() {
+  async function saveEdit() {
     const trimmed = draftName.trim();
     if (!trimmed || trimmed === displayName) {
       setEditing(false);
       return;
     }
-    socket.emit('player:update', { name: trimmed }, (res: { ok: boolean }) => {
-      if (res?.ok) {
-        localStorage.setItem(nameKey(code), trimmed);
-        setEditing(false);
-      }
-    });
+    const res = await emit(ClientEvents.PlayerUpdate, { name: trimmed });
+    if (res.ok) {
+      localStorage.setItem(nameKey(code), trimmed);
+      setStoredName(trimmed);
+      setEditing(false);
+    }
   }
 
   function toggleReady() {
-    socket.emit('player:update', { isReady: !isReady });
+    socket.emit(ClientEvents.PlayerUpdate, { isReady: !isReady });
   }
 
-  function changeLocale(loc: Locale) {
-    setLocale(loc);
-    socket.emit('player:update', { locale: loc });
-  }
-
+  // --- render ---
   if (room?.phase === 'in_game') {
     return (
       <main className="mx-auto flex min-h-full max-w-sm flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-sm uppercase tracking-widest text-white/40">{t('controller.inGameTitle')}</p>
+        <p className="text-sm uppercase tracking-widest text-white/40">
+          {t('controller.inGameTitle')}
+        </p>
         <h1 className="text-3xl font-bold">{t('controller.inGamePlaceholder')}</h1>
         {team && (
           <p className="text-sm text-white/60">
@@ -139,10 +141,8 @@ export default function Controller() {
 
   return (
     <main className="mx-auto flex min-h-full max-w-sm flex-col items-center justify-center gap-4 p-6 text-center">
-      <header className="w-full">
-        <div className="flex items-center justify-end">
-          <LanguageSwitcher />
-        </div>
+      <header className="flex w-full justify-end">
+        <LanguageSwitcher />
       </header>
 
       <p className="text-sm uppercase tracking-widest text-white/40">{t('controller.room')}</p>
@@ -169,23 +169,30 @@ export default function Controller() {
             maxLength={24}
             className="flex-1 rounded-lg bg-surface px-3 py-2 text-center outline-none ring-1 ring-white/10 focus:ring-accent"
             onKeyDown={(e) => {
-              if (e.key === 'Enter') saveEdit();
+              if (e.key === 'Enter') void saveEdit();
               if (e.key === 'Escape') setEditing(false);
             }}
           />
-          <Button onClick={saveEdit} className="px-3 py-2 text-sm">
+          <Button onClick={() => void saveEdit()} className="px-3 py-2 text-sm">
             {t('common.save')}
           </Button>
         </div>
       )}
 
       <p className="text-xs text-white/40">
-        {error ? error : connected ? (joined ? t('controller.joined') : t('controller.joining')) : t('host.connecting')}
+        {error
+          ? error
+          : connected
+          ? joined
+            ? t('controller.joined')
+            : t('controller.joining')
+          : t('host.connecting')}
       </p>
 
       {team && (
         <p className="text-xs text-white/50">
-          {t('controller.yourTeam')}: <span className="font-semibold">{t(`host.team${team}`)}</span>
+          {t('controller.yourTeam')}:{' '}
+          <span className="font-semibold">{t(`host.team${team}`)}</span>
         </p>
       )}
 
@@ -203,12 +210,6 @@ export default function Controller() {
       >
         {isReady ? t('controller.cancelReady') : t('controller.imReady')}
       </Button>
-
-      <button
-        onClick={() => changeLocale(i18n.language === 'ar' ? 'en' : 'ar')}
-        className="mt-2 hidden"
-        aria-hidden
-      />
     </main>
   );
 }

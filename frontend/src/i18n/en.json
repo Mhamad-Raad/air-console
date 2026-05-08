@@ -62,6 +62,7 @@
     "cancelReady": "Cancel ready",
     "editName": "Edit name",
     "kicked": "You were removed from the room.",
+    "defaultName": "Player",
     "yourTeam": "Your team",
     "roomNotFound": "Room not found. Going home…",
     "roomClosed": "The host closed the room.",
