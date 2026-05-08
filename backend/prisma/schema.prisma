@@ -1,0 +1,43 @@
+// air-console database schema
+// Persistent data only — live room state lives in Redis.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Game {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  minPlayers  Int
+  maxPlayers  Int
+  iconUrl     String?
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  matches Match[]
+
+  @@map("games")
+}
+
+model Match {
+  id        String    @id @default(cuid())
+  code      String    @unique
+  gameId    String
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  players   Json
+  result    Json?
+
+  game Game @relation(fields: [gameId], references: [id])
+
+  @@index([gameId])
+  @@map("matches")
+}
