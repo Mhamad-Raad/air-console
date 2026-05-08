@@ -31,6 +31,11 @@ export default function Host() {
     };
   }, [connected, socket, code, setRoom]);
 
+  function kick(playerId: string, name: string) {
+    if (!confirm(`Remove ${name} from the room?`)) return;
+    socket.emit('room:kick', { playerId });
+  }
+
   return (
     <main className="flex min-h-full flex-col items-center justify-center gap-8 p-8">
       <header className="text-center">
@@ -56,8 +61,16 @@ export default function Host() {
             <li className="text-sm text-white/40">Waiting for players…</li>
           )}
           {room?.players.map((p) => (
-            <li key={p.id} className="text-sm">
-              {p.name}
+            <li key={p.id} className="flex items-center justify-between rounded px-2 py-1 hover:bg-white/5">
+              <span className="text-sm">{p.name}</span>
+              <button
+                onClick={() => kick(p.id, p.name)}
+                aria-label={`Remove ${p.name}`}
+                className="rounded px-2 text-white/40 transition hover:bg-red-500/20 hover:text-red-400"
+                title="Remove player"
+              >
+                ×
+              </button>
             </li>
           ))}
         </ul>
