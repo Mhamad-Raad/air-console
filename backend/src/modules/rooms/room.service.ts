@@ -93,6 +93,11 @@ export const RoomService = {
     const room = await RoomRepository.get(code);
     if (!room) return null;
     room.players = room.players.filter((p) => p.id !== playerId);
+    // If the last player drops while a game is running, revert to lobby so the
+    // host isn't stuck on the in-game view.
+    if (room.players.length === 0 && room.phase === 'in_game') {
+      room.phase = 'lobby';
+    }
     room.updatedAt = Date.now();
     await RoomRepository.save(room);
     return room;
@@ -112,6 +117,17 @@ export const RoomService = {
     }
 
     room.phase = 'in_game';
+    room.updatedAt = Date.now();
+    await RoomRepository.save(room);
+    return room;
+  },
+
+  async endGame(code: string): Promise<Room> {
+    const room = await RoomRepository.get(code);
+    if (!room) throw new NotFoundError('Room not found');
+    room.phase = 'lobby';
+    // Players need to re-confirm before the next game.
+    for (const p of room.players) p.isReady = false;
     room.updatedAt = Date.now();
     await RoomRepository.save(room);
     return room;

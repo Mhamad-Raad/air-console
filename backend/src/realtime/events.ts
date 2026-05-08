@@ -9,6 +9,7 @@ export const ClientEvents = {
   PlayerUpdate: 'player:update',
   PlayerSet: 'player:set', // host changes another player (e.g. team assignment)
   GameStart: 'game:start',
+  GameEnd: 'game:end',
   GameAction: 'game:action',
 } as const;
 

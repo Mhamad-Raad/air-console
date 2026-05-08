@@ -153,6 +153,20 @@ export function registerRoomHandlers(socket: AppSocket): void {
     }
   });
 
+  socket.on(ClientEvents.GameEnd, async (_payload: unknown, ack?: Ack) => {
+    const { code, role } = socket.data;
+    if (!code || role !== 'host') return ack?.({ ok: false, error: 'Host only' });
+    try {
+      const room = await RoomService.endGame(code);
+      ack?.({ ok: true, room });
+      await broadcastState(code);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to end';
+      logger.warn({ err, code }, 'game:end failed');
+      ack?.({ ok: false, error: message });
+    }
+  });
+
   socket.on('disconnect', async () => {
     const { code, role, playerId } = socket.data;
     if (!code) return;

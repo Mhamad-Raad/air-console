@@ -78,6 +78,10 @@ export default function Host() {
     });
   }
 
+  function endGame() {
+    socket.emit('game:end', {});
+  }
+
   const players = room?.players ?? [];
   const playerCount = players.length;
   const minPlayers = game?.minPlayers ?? 2;
@@ -98,6 +102,9 @@ export default function Host() {
             </li>
           ))}
         </ul>
+        <Button variant="secondary" onClick={endGame} className="mt-6">
+          {t('host.endGame')}
+        </Button>
       </main>
     );
   }
