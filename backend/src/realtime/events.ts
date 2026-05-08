@@ -40,7 +40,7 @@ export interface KickPayload {
 }
 
 export type Team = 'A' | 'B';
-export type Locale = 'en' | 'ar';
+export type Locale = 'en' | 'ar' | 'ckb';
 
 export interface PlayerUpdatePayload {
   name?: string;

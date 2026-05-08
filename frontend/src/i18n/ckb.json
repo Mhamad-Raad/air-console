@@ -1,0 +1,72 @@
+{
+  "common": {
+    "appName": "ئەیر کۆنسۆڵ",
+    "loading": "بارکردن…",
+    "back": "گەڕانەوە",
+    "cancel": "هەڵوەشاندنەوە",
+    "save": "پاشەکەوتکردن",
+    "edit": "گۆڕینکاری",
+    "remove": "لابردن",
+    "you": "تۆ"
+  },
+  "home": {
+    "tagline": "یارییەک هەڵبژێرە. تەلەفۆنەکان دەبنە کۆنترۆڵەر.",
+    "playersRange": "{{min}}–{{max}} یاریزان",
+    "start": "دەستپێکردن",
+    "creating": "دروستکردن…"
+  },
+  "join": {
+    "joining": "چوونە ژوورەوە بۆ",
+    "yourName": "ناوەکەت",
+    "join": "بچۆ ژوورەوە",
+    "namePlaceholder": "بۆ نموونە: محەمەد"
+  },
+  "host": {
+    "roomCode": "کۆدی ژوور",
+    "connected": "پەیوەستە",
+    "connecting": "پەیوەندیکردن…",
+    "scanToJoin": "سکان بکە بۆ چوونە ژوورەوە",
+    "players": "یاریزانان",
+    "waitingForPlayers": "چاوەڕێی یاریزانانە…",
+    "removeAsk": "{{name}} لاببرێت؟",
+    "removeYes": "بەڵێ، لایببە",
+    "removeNo": "هەڵوەشاندنەوە",
+    "team": "تیم",
+    "noTeam": "بێ تیم",
+    "teamA": "تیمی أ",
+    "teamB": "تیمی ب",
+    "teamAShort": "أ",
+    "teamBShort": "ب",
+    "ready": "ئامادە",
+    "notReady": "ئامادە نیە",
+    "startGame": "دەستپێکردنی یاری",
+    "needMorePlayers": "پێویست بە لانیکەم {{min}} یاریزان",
+    "needAllReady": "پێویستە هەموو یاریزانان ئامادە بن",
+    "endGame": "گەڕانەوە بۆ ژوور",
+    "inGame": "یاری بەردەوامە",
+    "inGamePlaceholder": "یاری دەستی پێکرد. (ڕووکاری یاری بەم زووانە دێت.)"
+  },
+  "controller": {
+    "room": "ژوور",
+    "greeting": "سڵاو {{name}}",
+    "joining": "چوونە ژوورەوە…",
+    "joined": "چوویتە ژوورەوە",
+    "lobbyCount_one": "{{count}} یاریزان لە چاوەڕوانیدایە",
+    "lobbyCount_other": "{{count}} یاریزان لە چاوەڕوانیدان",
+    "waitingForHost": "چاوەڕێی هۆست",
+    "imReady": "ئامادەم",
+    "cancelReady": "هەڵوەشاندنەوەی ئامادەبوون",
+    "editName": "گۆڕینی ناو",
+    "kicked": "تۆ لە ژوورەکە لاچوویت.",
+    "yourTeam": "تیمەکەت",
+    "noTeam": "هێشتا تیمت نیە",
+    "roomNotFound": "ژوور نەدۆزرایەوە. گەڕانەوە بۆ ماڵەوە…",
+    "inGameTitle": "ئامادە بە",
+    "inGamePlaceholder": "یاری دەستی پێکرد."
+  },
+  "language": {
+    "english": "English",
+    "arabic": "العربية",
+    "kurdish": "کوردی"
+  }
+}

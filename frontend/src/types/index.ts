@@ -2,7 +2,7 @@
 // Once we move to a monorepo with shared types we can drop this duplication.
 
 export type Team = 'A' | 'B';
-export type Locale = 'en' | 'ar';
+export type Locale = 'en' | 'ar' | 'ckb';
 
 export interface GameCatalogEntry {
   slug: string;

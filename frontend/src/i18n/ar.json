@@ -42,6 +42,7 @@
     "startGame": "ابدأ اللعبة",
     "needMorePlayers": "تحتاج على الأقل {{min}} لاعبين",
     "needAllReady": "يجب أن يكون جميع اللاعبين جاهزين",
+    "endGame": "العودة إلى الردهة",
     "inGame": "اللعبة جارية",
     "inGamePlaceholder": "بدأت اللعبة. (واجهة اللعب قريباً.)"
   },
@@ -65,6 +66,7 @@
   },
   "language": {
     "english": "English",
-    "arabic": "العربية"
+    "arabic": "العربية",
+    "kurdish": "کوردی"
   }
 }

@@ -21,6 +21,7 @@ export function LanguageSwitcher({ className = '' }: { className?: string }) {
     <div className={`inline-flex gap-1 rounded-lg bg-surface p-1 ${className}`}>
       <Btn value="en" label={t('language.english')} />
       <Btn value="ar" label={t('language.arabic')} />
+      <Btn value="ckb" label={t('language.kurdish')} />
     </div>
   );
 }
