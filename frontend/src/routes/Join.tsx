@@ -2,15 +2,18 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 
+const nameKey = (code: string) => `air-console:room:${code}:name`;
+
 export default function Join() {
   const { code = '' } = useParams();
-  const [name, setName] = useState('');
+  const [name, setName] = useState(() => localStorage.getItem(nameKey(code)) ?? '');
   const navigate = useNavigate();
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
-    sessionStorage.setItem(`room:${code}:name`, name.trim());
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    localStorage.setItem(nameKey(code), trimmed);
     navigate(`/controller/${code}`);
   }
 
