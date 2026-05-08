@@ -60,8 +60,9 @@ export function registerRoomHandlers(socket: AppSocket): void {
       await broadcastState(payload.code);
     } catch (err) {
       logger.warn({ err }, 'room:join failed');
-      socket.emit(ServerEvents.RoomError, { message: 'Failed to join room' });
-      ack?.({ ok: false, error: 'Failed to join room' });
+      const message = err instanceof Error ? err.message : 'Failed to join room';
+      socket.emit(ServerEvents.RoomError, { message });
+      ack?.({ ok: false, error: message });
     }
   });
 
