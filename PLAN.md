@@ -26,6 +26,8 @@ We are **not** trying to clone AirConsole's full library. We're replicating the 
 
 ## Current state (as of 2026-05-08)
 
+**Phase 1 — Lobby completion + bilingual shell: ✅ DONE**
+
 Working end-to-end:
 
 - Game catalog REST endpoint (`GET /api/games`)
@@ -35,15 +37,19 @@ Working end-to-end:
 - Disconnect cleanup (player drops off when phone closes browser)
 - Host can kick a player; kicked phone is sent home with a notice
 - Name + playerId persisted in `localStorage` so iPhone Safari closes don't wipe identity
-- Smoke test script proving multi-client broadcast (`frontend/scripts/smoke-test.mjs`)
+- Edit name from controller (inline, with save/cancel)
+- Ready toggle on each controller; ready dot per player on host
+- Team picker on host (cycle None → A → B); only shown when game.supportsTeams
+- Start game button gated by min-players + all-ready; transitions phase to `in_game`
+- In-game placeholder view on both host and controller
+- Full Arabic + English UI with RTL layout, language switcher in header, locale persisted per player
+- Smoke test covering full lobby flow including team assignment, ready, and game:start
 
 Not yet wired:
 
-- Team picker, "ready" state, "start game" button
 - Reconnection after a brief network drop (currently treated as a fresh join)
 - Any actual gameplay — `dominos.engine.ts` is a skeleton
 - Frontend renderer module per game
-- **Arabic UI / RTL layout**
 - Production deployment, env separation, monitoring
 
 ## Architectural principles
