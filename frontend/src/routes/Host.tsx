@@ -9,7 +9,11 @@ import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { api } from '../lib/api';
 import type { GameCatalogEntry, Player, Room, Team } from '../types';
 
-const TEAM_CYCLE: (Team | null)[] = [null, 'A', 'B'];
+const TEAM_STYLES: Record<Team, string> = {
+  A: 'bg-sky-500/80 text-white border-sky-400',
+  B: 'bg-amber-500/80 text-white border-amber-400',
+};
+const TEAM_INACTIVE = 'bg-white/5 text-white/50 hover:bg-white/10 border-white/10';
 
 export default function Host() {
   const { t } = useTranslation();
@@ -19,6 +23,7 @@ export default function Host() {
   const setRoom = useRoomStore((s) => s.setRoom);
   const [game, setGame] = useState<GameCatalogEntry | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
+  const [pendingKick, setPendingKick] = useState<string | null>(null);
 
   const joinUrl = `${window.location.origin}/join/${code}`;
 
@@ -48,15 +53,22 @@ export default function Host() {
       .catch(() => setGame(null));
   }, [room?.gameSlug]);
 
-  function kick(playerId: string, name: string) {
-    if (!confirm(t('host.removeConfirm', { name }))) return;
-    socket.emit('room:kick', { playerId });
+  // Auto-cancel pending kick after 4s if not confirmed.
+  useEffect(() => {
+    if (!pendingKick) return;
+    const t = setTimeout(() => setPendingKick(null), 4000);
+    return () => clearTimeout(t);
+  }, [pendingKick]);
+
+  function confirmKick(playerId: string) {
+    socket.emit('room:kick', { playerId }, (res: { ok: boolean; error?: string }) => {
+      if (!res?.ok) console.warn('kick failed', res?.error);
+    });
+    setPendingKick(null);
   }
 
-  function cycleTeam(player: Player) {
-    const idx = TEAM_CYCLE.indexOf(player.team ?? null);
-    const next = TEAM_CYCLE[(idx + 1) % TEAM_CYCLE.length] ?? null;
-    socket.emit('player:set', { playerId: player.id, patch: { team: next } });
+  function setTeam(player: Player, team: Team | null) {
+    socket.emit('player:set', { playerId: player.id, patch: { team } });
   }
 
   function startGame() {
@@ -119,44 +131,73 @@ export default function Host() {
             {game?.maxPlayers ? `/${game.maxPlayers}` : ''})
           </span>
         </h2>
-        <ul className="mt-2 space-y-1">
+        <ul className="mt-3 space-y-2">
           {players.length === 0 && (
             <li className="text-sm text-white/40">{t('host.waitingForPlayers')}</li>
           )}
-          {players.map((p) => (
-            <li
-              key={p.id}
-              className="flex items-center justify-between rounded px-2 py-1 hover:bg-white/5"
-            >
-              <span className="flex items-center gap-2 text-sm">
-                <span
-                  className={`inline-block h-2 w-2 rounded-full ${
-                    p.isReady ? 'bg-emerald-400' : 'bg-white/20'
-                  }`}
-                  aria-label={p.isReady ? t('host.ready') : t('host.notReady')}
-                />
-                {p.name}
-              </span>
-              <span className="flex items-center gap-1">
-                {game?.supportsTeams && (
-                  <button
-                    onClick={() => cycleTeam(p)}
-                    className="rounded bg-white/5 px-2 py-0.5 text-xs text-white/70 hover:bg-white/10"
-                    title={t('host.team')}
-                  >
-                    {p.team ? t(`host.team${p.team}`) : t('host.noTeam')}
-                  </button>
+          {players.map((p) => {
+            const isPending = pendingKick === p.id;
+            return (
+              <li key={p.id} className="rounded-lg bg-white/5 p-2">
+                {isPending ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm">{t('host.removeAsk', { name: p.name })}</span>
+                    <span className="flex gap-2">
+                      <button
+                        onClick={() => confirmKick(p.id)}
+                        className="rounded bg-red-500/80 px-3 py-1 text-xs font-medium text-white hover:bg-red-500"
+                      >
+                        {t('host.removeYes')}
+                      </button>
+                      <button
+                        onClick={() => setPendingKick(null)}
+                        className="rounded bg-white/10 px-3 py-1 text-xs text-white/70 hover:bg-white/20"
+                      >
+                        {t('host.removeNo')}
+                      </button>
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+                      <span
+                        className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${
+                          p.isReady ? 'bg-emerald-400' : 'bg-white/20'
+                        }`}
+                        aria-label={p.isReady ? t('host.ready') : t('host.notReady')}
+                      />
+                      <span className="truncate">{p.name}</span>
+                    </span>
+                    {game?.supportsTeams && (
+                      <span className="flex shrink-0 gap-1">
+                        {(['A', 'B'] as Team[]).map((tm) => {
+                          const active = p.team === tm;
+                          return (
+                            <button
+                              key={tm}
+                              onClick={() => setTeam(p, active ? null : tm)}
+                              className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                                active ? TEAM_STYLES[tm] : TEAM_INACTIVE
+                              }`}
+                            >
+                              {t(`host.team${tm}`)}
+                            </button>
+                          );
+                        })}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => setPendingKick(p.id)}
+                      aria-label={`${t('common.remove')} ${p.name}`}
+                      className="shrink-0 rounded px-2 py-1 text-white/40 transition hover:bg-red-500/20 hover:text-red-400"
+                    >
+                      ×
+                    </button>
+                  </div>
                 )}
-                <button
-                  onClick={() => kick(p.id, p.name)}
-                  aria-label={`${t('common.remove')} ${p.name}`}
-                  className="rounded px-2 text-white/40 transition hover:bg-red-500/20 hover:text-red-400"
-                >
-                  ×
-                </button>
-              </span>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       </section>
 
