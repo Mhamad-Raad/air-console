@@ -1,0 +1,65 @@
+{
+  "common": {
+    "appName": "air-console",
+    "loading": "Loading…",
+    "back": "Back",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "remove": "Remove",
+    "you": "You"
+  },
+  "home": {
+    "tagline": "Pick a game. Phones become controllers.",
+    "playersRange": "{{min}}–{{max}} players",
+    "start": "Start",
+    "creating": "Creating…"
+  },
+  "join": {
+    "joining": "Joining",
+    "yourName": "Your name",
+    "join": "Join",
+    "namePlaceholder": "e.g. Mohammed"
+  },
+  "host": {
+    "roomCode": "Room code",
+    "connected": "connected",
+    "connecting": "connecting…",
+    "scanToJoin": "Scan to join",
+    "players": "Players",
+    "waitingForPlayers": "Waiting for players…",
+    "removeConfirm": "Remove {{name}} from the room?",
+    "team": "Team",
+    "noTeam": "—",
+    "teamA": "A",
+    "teamB": "B",
+    "ready": "Ready",
+    "notReady": "Not ready",
+    "startGame": "Start game",
+    "needMorePlayers": "Need at least {{min}} players",
+    "needAllReady": "All players must be ready",
+    "inGame": "Game in progress",
+    "inGamePlaceholder": "The game has started. (Gameplay UI coming next.)"
+  },
+  "controller": {
+    "room": "Room",
+    "greeting": "Hi, {{name}}",
+    "joining": "joining…",
+    "joined": "joined",
+    "lobbyCount_one": "{{count}} player in lobby",
+    "lobbyCount_other": "{{count}} players in lobby",
+    "waitingForHost": "Waiting for host",
+    "imReady": "I'm ready",
+    "cancelReady": "Cancel ready",
+    "editName": "Edit name",
+    "kicked": "You were removed from the room.",
+    "yourTeam": "Your team",
+    "noTeam": "No team yet",
+    "inGameTitle": "Get ready",
+    "inGamePlaceholder": "The game has started."
+  },
+  "language": {
+    "english": "English",
+    "arabic": "العربية"
+  }
+}

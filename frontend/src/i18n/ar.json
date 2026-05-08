@@ -1,0 +1,65 @@
+{
+  "common": {
+    "appName": "اير كونسول",
+    "loading": "جاري التحميل…",
+    "back": "رجوع",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "edit": "تعديل",
+    "remove": "إزالة",
+    "you": "أنت"
+  },
+  "home": {
+    "tagline": "اختر لعبة. الهواتف تصبح وحدات تحكم.",
+    "playersRange": "{{min}}–{{max}} لاعبين",
+    "start": "ابدأ",
+    "creating": "جاري الإنشاء…"
+  },
+  "join": {
+    "joining": "الانضمام إلى",
+    "yourName": "اسمك",
+    "join": "انضم",
+    "namePlaceholder": "مثلاً: محمد"
+  },
+  "host": {
+    "roomCode": "رمز الغرفة",
+    "connected": "متصل",
+    "connecting": "جاري الاتصال…",
+    "scanToJoin": "امسح للانضمام",
+    "players": "اللاعبون",
+    "waitingForPlayers": "بانتظار اللاعبين…",
+    "removeConfirm": "إزالة {{name}} من الغرفة؟",
+    "team": "الفريق",
+    "noTeam": "—",
+    "teamA": "أ",
+    "teamB": "ب",
+    "ready": "جاهز",
+    "notReady": "غير جاهز",
+    "startGame": "ابدأ اللعبة",
+    "needMorePlayers": "تحتاج على الأقل {{min}} لاعبين",
+    "needAllReady": "يجب أن يكون جميع اللاعبين جاهزين",
+    "inGame": "اللعبة جارية",
+    "inGamePlaceholder": "بدأت اللعبة. (واجهة اللعب قريباً.)"
+  },
+  "controller": {
+    "room": "الغرفة",
+    "greeting": "مرحباً، {{name}}",
+    "joining": "جاري الانضمام…",
+    "joined": "انضممت",
+    "lobbyCount_one": "{{count}} لاعب في الانتظار",
+    "lobbyCount_other": "{{count}} لاعبين في الانتظار",
+    "waitingForHost": "بانتظار المضيف",
+    "imReady": "أنا جاهز",
+    "cancelReady": "إلغاء الجاهزية",
+    "editName": "تعديل الاسم",
+    "kicked": "تمت إزالتك من الغرفة.",
+    "yourTeam": "فريقك",
+    "noTeam": "لا يوجد فريق بعد",
+    "inGameTitle": "استعد",
+    "inGamePlaceholder": "بدأت اللعبة."
+  },
+  "language": {
+    "english": "English",
+    "arabic": "العربية"
+  }
+}
