@@ -23,8 +23,11 @@ export async function buildServer(): Promise<FastifyInstance> {
   });
 
   await app.register(helmet, { contentSecurityPolicy: false });
+  // In dev, accept any origin (so phones on the LAN can connect without
+  // hardcoding their IP into CORS_ORIGIN). In prod, lock down via env.
+  const corsOrigin = env.NODE_ENV === 'development' ? true : corsOrigins;
   await app.register(cors, {
-    origin: corsOrigins,
+    origin: corsOrigin,
     credentials: true,
   });
   await app.register(sensible);

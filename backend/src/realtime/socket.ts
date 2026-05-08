@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { Server as IOServer } from 'socket.io';
-import { corsOrigins } from '../config/env.js';
+import { env, corsOrigins } from '../config/env.js';
 import { logger } from '../lib/logger.js';
 import { registerRoomHandlers } from './handlers/room.handler.js';
 import { registerGameHandlers } from './handlers/game.handler.js';
@@ -14,8 +14,9 @@ export function getIO(): AppServer {
 }
 
 export function attachSocketIO(app: FastifyInstance): AppServer {
+  const corsOrigin = env.NODE_ENV === 'development' ? true : corsOrigins;
   io = new IOServer<any, any, any, AppSocketData>(app.server, {
-    cors: { origin: corsOrigins, credentials: true },
+    cors: { origin: corsOrigin, credentials: true },
     transports: ['websocket', 'polling'],
   });
 
