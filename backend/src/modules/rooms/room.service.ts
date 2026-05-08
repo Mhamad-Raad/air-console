@@ -29,6 +29,15 @@ export const RoomService = {
     return room;
   },
 
+  async setHost(code: string, hostSocketId: string): Promise<Room> {
+    const room = await RoomRepository.get(code);
+    if (!room) throw new NotFoundError('Room not found');
+    room.hostSocketId = hostSocketId;
+    room.updatedAt = Date.now();
+    await RoomRepository.save(room);
+    return room;
+  },
+
   async addPlayer(code: string, player: Omit<Player, 'joinedAt'>): Promise<Room> {
     const room = await RoomRepository.get(code);
     if (!room) throw new NotFoundError('Room not found');
