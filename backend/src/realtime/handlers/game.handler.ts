@@ -1,8 +1,8 @@
-import type { Socket } from 'socket.io';
 import { ClientEvents, ServerEvents, type GameActionPayload } from '../events.js';
 import { logger } from '../../lib/logger.js';
+import type { AppSocket } from '../socketContext.js';
 
-export function registerGameHandlers(socket: Socket): void {
+export function registerGameHandlers(socket: AppSocket): void {
   socket.on(ClientEvents.GameStart, (payload: { code: string }) => {
     // TODO: GameService.start — picks engine, builds initial state, broadcasts
     logger.debug({ code: payload.code }, 'game:start');

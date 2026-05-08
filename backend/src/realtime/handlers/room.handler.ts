@@ -1,4 +1,3 @@
-import type { Socket } from 'socket.io';
 import { nanoid } from 'nanoid';
 import {
   ClientEvents,
@@ -11,7 +10,7 @@ import { logger } from '../../lib/logger.js';
 import { RoomService } from '../../modules/rooms/room.service.js';
 import { JoinRoomSchema } from '../../modules/rooms/room.schema.js';
 import { getIO } from '../socket.js';
-import '../socketContext.js';
+import type { AppSocket } from '../socketContext.js';
 
 type Ack = (res: { ok: boolean; error?: string; room?: unknown; playerId?: string }) => void;
 
@@ -22,7 +21,7 @@ async function broadcastState(code: string): Promise<void> {
   if (room) getIO().to(channel(code)).emit(ServerEvents.RoomState, room);
 }
 
-export function registerRoomHandlers(socket: Socket): void {
+export function registerRoomHandlers(socket: AppSocket): void {
   socket.on(ClientEvents.HostClaim, async (payload: HostClaimPayload, ack?: Ack) => {
     const code = payload.code?.toUpperCase();
     if (!code) return ack?.({ ok: false, error: 'Missing code' });
