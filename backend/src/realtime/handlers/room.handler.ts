@@ -4,6 +4,7 @@ import {
   ServerEvents,
   type HostClaimPayload,
   type JoinRoomPayload,
+  type KickPayload,
   type PlayerUpdatePayload,
 } from '../events.js';
 import { logger } from '../../lib/logger.js';
@@ -72,6 +73,38 @@ export function registerRoomHandlers(socket: AppSocket): void {
     }
     await socket.leave(channel(code));
     socket.data = {};
+  });
+
+  socket.on(ClientEvents.RoomKick, async (payload: KickPayload, ack?: Ack) => {
+    const { code, role } = socket.data;
+    if (!code || role !== 'host') {
+      return ack?.({ ok: false, error: 'Only the host can kick players' });
+    }
+    if (!payload?.playerId) return ack?.({ ok: false, error: 'Missing playerId' });
+
+    try {
+      const room = await RoomService.get(code);
+      const target = room.players.find((p) => p.id === payload.playerId);
+      if (!target) return ack?.({ ok: false, error: 'Player not in room' });
+
+      await RoomService.removePlayer(code, payload.playerId);
+
+      // Notify the kicked socket directly so they can navigate home.
+      if (target.socketId) {
+        const kickedSocket = getIO().sockets.sockets.get(target.socketId);
+        if (kickedSocket) {
+          kickedSocket.emit(ServerEvents.PlayerKicked, { code });
+          await kickedSocket.leave(channel(code));
+          kickedSocket.data = {};
+        }
+      }
+
+      ack?.({ ok: true });
+      await broadcastState(code);
+    } catch (err) {
+      logger.warn({ err, code, playerId: payload.playerId }, 'room:kick failed');
+      ack?.({ ok: false, error: 'Failed to kick player' });
+    }
   });
 
   socket.on(ClientEvents.PlayerUpdate, async (payload: PlayerUpdatePayload) => {
