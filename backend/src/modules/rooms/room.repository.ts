@@ -1,14 +1,14 @@
 import { redis } from '../../lib/redis.js';
+import { ROOM } from '../../config/constants.js';
 import type { Room } from './room.types.js';
 
 const KEY_PREFIX = 'room:';
-const TTL_SECONDS = 60 * 60 * 6; // 6h — rooms auto-expire if abandoned
 
 const key = (code: string) => `${KEY_PREFIX}${code}`;
 
 export const RoomRepository = {
   async save(room: Room): Promise<void> {
-    await redis.set(key(room.code), JSON.stringify(room), 'EX', TTL_SECONDS);
+    await redis.set(key(room.code), JSON.stringify(room), 'EX', ROOM.TTL_SECONDS);
   },
 
   async get(code: string): Promise<Room | null> {

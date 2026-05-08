@@ -13,10 +13,10 @@ import { StatusDot } from '../components/ui/StatusDot';
 import { RouteHeader } from '../components/ui/RouteHeader';
 import { api } from '../lib/api';
 import { ClientEvents, ServerEvents } from '../lib/events';
+import { TIMING } from '../lib/constants';
 import type { GameCatalogEntry, Player, Room, Team } from '../types';
 
 const TEAM_TONE: Record<Team, 'sky' | 'amber'> = { A: 'sky', B: 'amber' };
-const LEAVE_FALLBACK_MS = 600;
 
 export default function Host() {
   const { t } = useTranslation();
@@ -98,7 +98,7 @@ export default function Host() {
     };
     void emit(ClientEvents.RoomClose).then(goHome);
     // Fallback in case the ack never lands.
-    setTimeout(goHome, LEAVE_FALLBACK_MS);
+    setTimeout(goHome, TIMING.LEAVE_FALLBACK_MS);
   }
 
   // --- derived state ---

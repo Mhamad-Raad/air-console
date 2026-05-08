@@ -1,7 +1,8 @@
 import { useRoomStore } from '../stores/room.store';
+import { STORAGE_KEYS } from '../lib/constants';
 import type { Player } from '../types';
 
-const PLAYER_ID_KEY = 'air-console:playerId';
+const PLAYER_ID_KEY = STORAGE_KEYS.PLAYER_ID;
 
 /**
  * Compact room store accessor — `const { room, setRoom, reset } = useRoom();`

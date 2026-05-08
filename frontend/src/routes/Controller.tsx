@@ -8,12 +8,12 @@ import { useMe, useRoom } from '../hooks/useRoom';
 import { Button } from '../components/ui/Button';
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { ClientEvents, ServerEvents } from '../lib/events';
+import { STORAGE_KEYS, TIMING, PLAYER as PLAYER_LIMITS } from '../lib/constants';
 import { type Locale } from '../i18n';
 import type { Room } from '../types';
 
-const PLAYER_ID_KEY = 'air-console:playerId';
-const nameKey = (code: string) => `air-console:room:${code}:name`;
-const ROOM_NOT_FOUND_REDIRECT_MS = 1500;
+const PLAYER_ID_KEY = STORAGE_KEYS.PLAYER_ID;
+const nameKey = STORAGE_KEYS.ROOM_NAME;
 
 export default function Controller() {
   const { t, i18n } = useTranslation();
@@ -61,7 +61,7 @@ export default function Controller() {
         if (/not found/i.test(errMsg)) {
           reset();
           setError(t('controller.roomNotFound'));
-          setTimeout(() => navigate('/'), ROOM_NOT_FOUND_REDIRECT_MS);
+          setTimeout(() => navigate('/'), TIMING.ROOM_NOT_FOUND_REDIRECT_MS);
         } else {
           setError(errMsg);
         }
@@ -166,7 +166,7 @@ export default function Controller() {
             autoFocus
             value={draftName}
             onChange={(e) => setDraftName(e.target.value)}
-            maxLength={24}
+            maxLength={PLAYER_LIMITS.NAME_MAX_LENGTH}
             className="flex-1 rounded-lg bg-surface px-3 py-2 text-center outline-none ring-1 ring-white/10 focus:ring-accent"
             onKeyDown={(e) => {
               if (e.key === 'Enter') void saveEdit();

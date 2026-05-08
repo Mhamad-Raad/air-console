@@ -1,11 +1,11 @@
 import { customAlphabet } from 'nanoid';
 import { ConflictError, NotFoundError, ValidationError } from '../../shared/errors.js';
 import { GameService } from '../games/game.service.js';
+import { ROOM, PLAYER } from '../../config/constants.js';
 import { RoomRepository } from './room.repository.js';
 import type { Player, PlayerPatch, Room } from './room.types.js';
 
-const ROOM_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1
-const generateCode = customAlphabet(ROOM_CODE_ALPHABET, 4);
+const generateCode = customAlphabet(ROOM.CODE_ALPHABET, ROOM.CODE_LENGTH);
 
 export const RoomService = {
   async create(input: { gameSlug: string; hostSocketId: string }): Promise<Room> {
@@ -13,7 +13,9 @@ export const RoomService = {
     let attempts = 0;
     while (await RoomRepository.exists(code)) {
       code = generateCode();
-      if (++attempts > 10) throw new ConflictError('Could not allocate a room code');
+      if (++attempts > ROOM.CODE_COLLISION_RETRIES) {
+        throw new ConflictError('Could not allocate a room code');
+      }
     }
 
     const now = Date.now();
@@ -79,7 +81,9 @@ export const RoomService = {
 
     if (patch.name !== undefined) {
       const trimmed = patch.name.trim();
-      if (!trimmed || trimmed.length > 24) throw new ValidationError('Invalid name');
+      if (trimmed.length < PLAYER.NAME_MIN_LENGTH || trimmed.length > PLAYER.NAME_MAX_LENGTH) {
+        throw new ValidationError('Invalid name');
+      }
       player.name = trimmed;
     }
     if (patch.team !== undefined) player.team = patch.team;

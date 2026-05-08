@@ -3,8 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/Button';
 import { RouteHeader } from '../components/ui/RouteHeader';
+import { PLAYER, STORAGE_KEYS } from '../lib/constants';
 
-const nameKey = (code: string) => `air-console:room:${code}:name`;
+const nameKey = STORAGE_KEYS.ROOM_NAME;
 
 export default function Join() {
   const { t } = useTranslation();
@@ -39,7 +40,7 @@ export default function Join() {
             autoFocus
             value={name}
             onChange={(e) => setName(e.target.value)}
-            maxLength={24}
+            maxLength={PLAYER.NAME_MAX_LENGTH}
             className="mt-1 w-full rounded-lg bg-surface px-3 py-2 outline-none ring-1 ring-white/10 focus:ring-accent"
             placeholder={t('join.namePlaceholder')}
           />
