@@ -5,6 +5,7 @@ export const ClientEvents = {
   HostClaim: 'host:claim',
   RoomJoin: 'room:join',
   RoomLeave: 'room:leave',
+  RoomKick: 'room:kick',
   PlayerUpdate: 'player:update',
   TeamUpdate: 'team:update',
   GameStart: 'game:start',
@@ -16,6 +17,7 @@ export const ServerEvents = {
   RoomError: 'room:error',
   PlayerJoined: 'player:joined',
   PlayerLeft: 'player:left',
+  PlayerKicked: 'player:kicked',
   GameState: 'game:state',
   GameEnded: 'game:ended',
 } as const;
@@ -31,6 +33,10 @@ export interface JoinRoomPayload {
   code: string;
   name: string;
   playerId?: string;
+}
+
+export interface KickPayload {
+  playerId: string;
 }
 
 export interface PlayerUpdatePayload {
