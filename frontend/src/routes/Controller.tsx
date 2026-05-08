@@ -72,13 +72,20 @@ export default function Controller() {
       alert(t('controller.kicked'));
       navigate('/');
     };
+    const onRoomClosed = () => {
+      reset();
+      alert(t('controller.roomClosed'));
+      navigate('/');
+    };
 
     socket.on('room:state', onState);
     socket.on('player:kicked', onKicked);
+    socket.on('room:closed', onRoomClosed);
 
     return () => {
       socket.off('room:state', onState);
       socket.off('player:kicked', onKicked);
+      socket.off('room:closed', onRoomClosed);
       // Back-button or unmount: tell the server we're leaving so the host
       // doesn't show a ghost player. Server-side disconnect cleanup also
       // covers this when the tab actually closes.

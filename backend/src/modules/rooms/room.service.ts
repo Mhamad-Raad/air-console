@@ -138,4 +138,8 @@ export const RoomService = {
     if (!room) throw new NotFoundError('Room not found');
     return room;
   },
+
+  async deleteRoom(code: string): Promise<void> {
+    await RoomRepository.delete(code);
+  },
 };

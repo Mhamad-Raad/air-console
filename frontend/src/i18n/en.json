@@ -43,6 +43,10 @@
     "needMorePlayers": "Need at least {{min}} players",
     "needAllReady": "All players must be ready",
     "endGame": "Back to lobby",
+    "backHome": "Home",
+    "leaveAsk": "Close this room and go home? Players will be sent back.",
+    "leaveYes": "Yes, leave",
+    "leaveNo": "Stay",
     "inGame": "Game in progress",
     "inGamePlaceholder": "The game has started. (Gameplay UI coming next.)"
   },
@@ -60,6 +64,7 @@
     "kicked": "You were removed from the room.",
     "yourTeam": "Your team",
     "roomNotFound": "Room not found. Going home…",
+    "roomClosed": "The host closed the room.",
     "noTeam": "No team yet",
     "inGameTitle": "Get ready",
     "inGamePlaceholder": "The game has started."

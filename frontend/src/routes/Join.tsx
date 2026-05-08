@@ -22,8 +22,14 @@ export default function Join() {
 
   return (
     <main className="mx-auto flex min-h-full max-w-sm flex-col justify-center gap-6 p-6">
-      <header className="flex items-start justify-between">
-        <div>
+      <header className="flex items-start justify-between gap-2">
+        <button
+          onClick={() => navigate('/')}
+          className="rounded-lg bg-surface px-3 py-1.5 text-sm text-white/70 hover:bg-white/10"
+        >
+          <span aria-hidden>←</span> {t('common.back')}
+        </button>
+        <div className="flex-1 text-center">
           <p className="text-sm uppercase tracking-widest text-white/40">{t('join.joining')}</p>
           <h1 className="mt-1 text-4xl font-extrabold">{code}</h1>
         </div>

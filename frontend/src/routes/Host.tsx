@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { useSocket } from '../hooks/useSocket';
@@ -18,12 +18,15 @@ const TEAM_INACTIVE = 'bg-white/5 text-white/50 hover:bg-white/10 border-white/1
 export default function Host() {
   const { t } = useTranslation();
   const { code = '' } = useParams();
+  const navigate = useNavigate();
   const { socket, connected } = useSocket();
   const room = useRoomStore((s) => s.room);
   const setRoom = useRoomStore((s) => s.setRoom);
+  const reset = useRoomStore((s) => s.reset);
   const [game, setGame] = useState<GameCatalogEntry | null>(null);
   const [startError, setStartError] = useState<string | null>(null);
   const [pendingKick, setPendingKick] = useState<string | null>(null);
+  const [confirmingLeave, setConfirmingLeave] = useState(false);
 
   const joinUrl = `${window.location.origin}/join/${code}`;
 
@@ -38,12 +41,18 @@ export default function Host() {
     });
 
     const onState = (next: Room) => setRoom(next);
+    const onClosed = () => {
+      reset();
+      navigate('/');
+    };
     socket.on('room:state', onState);
+    socket.on('room:closed', onClosed);
 
     return () => {
       socket.off('room:state', onState);
+      socket.off('room:closed', onClosed);
     };
-  }, [connected, socket, code, setRoom]);
+  }, [connected, socket, code, setRoom, reset, navigate]);
 
   useEffect(() => {
     if (!room?.gameSlug) return;
@@ -82,6 +91,23 @@ export default function Host() {
     socket.emit('game:end', {});
   }
 
+  function requestLeave() {
+    if ((room?.players.length ?? 0) === 0) {
+      doLeave();
+      return;
+    }
+    setConfirmingLeave(true);
+  }
+
+  function doLeave() {
+    socket.emit('room:close', {}, () => {
+      reset();
+      navigate('/');
+    });
+    // Fallback navigation in case the ack never lands (e.g. backend hiccup).
+    setTimeout(() => navigate('/'), 600);
+  }
+
   const players = room?.players ?? [];
   const playerCount = players.length;
   const minPlayers = game?.minPlayers ?? 2;
@@ -112,6 +138,13 @@ export default function Host() {
   return (
     <main className="flex min-h-full flex-col items-center gap-6 p-8">
       <header className="flex w-full max-w-3xl items-start justify-between">
+        <button
+          onClick={requestLeave}
+          className="flex items-center gap-1 rounded-lg bg-surface px-3 py-1.5 text-sm text-white/70 hover:bg-white/10"
+        >
+          <span aria-hidden>←</span>
+          {t('host.backHome')}
+        </button>
         <div className="text-center">
           <p className="text-sm uppercase tracking-widest text-white/40">{t('host.roomCode')}</p>
           <h1 className="mt-1 text-6xl font-extrabold tracking-wider">{code}</h1>
@@ -121,6 +154,26 @@ export default function Host() {
         </div>
         <LanguageSwitcher />
       </header>
+
+      {confirmingLeave && (
+        <div className="w-full max-w-md rounded-xl border border-white/10 bg-surface p-4 text-center">
+          <p className="text-sm">{t('host.leaveAsk')}</p>
+          <div className="mt-3 flex justify-center gap-2">
+            <button
+              onClick={doLeave}
+              className="rounded-md bg-red-500/80 px-4 py-2 text-sm font-medium text-white hover:bg-red-500"
+            >
+              {t('host.leaveYes')}
+            </button>
+            <button
+              onClick={() => setConfirmingLeave(false)}
+              className="rounded-md bg-white/10 px-4 py-2 text-sm text-white/70 hover:bg-white/20"
+            >
+              {t('host.leaveNo')}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="rounded-2xl bg-white p-6">
         <QRCodeSVG value={joinUrl} size={220} />

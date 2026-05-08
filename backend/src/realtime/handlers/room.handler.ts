@@ -153,6 +153,33 @@ export function registerRoomHandlers(socket: AppSocket): void {
     }
   });
 
+  socket.on(ClientEvents.RoomClose, async (_payload: unknown, ack?: Ack) => {
+    const { code, role } = socket.data;
+    if (!code || role !== 'host') return ack?.({ ok: false, error: 'Host only' });
+    try {
+      const io = getIO();
+      // Notify everyone in the room (including the host) so all clients can navigate home.
+      io.to(channel(code)).emit(ServerEvents.RoomClosed, { code });
+      // Force every connected socket out of the channel and clear their context.
+      // We resolve from the local sockets map (mutable) rather than fetchSockets(),
+      // which returns RemoteSocket with read-only data.
+      const adapterRoom = io.sockets.adapter.rooms.get(channel(code));
+      if (adapterRoom) {
+        for (const id of adapterRoom) {
+          const s = io.sockets.sockets.get(id);
+          if (!s) continue;
+          await s.leave(channel(code));
+          s.data = {};
+        }
+      }
+      await RoomService.deleteRoom(code);
+      ack?.({ ok: true });
+    } catch (err) {
+      logger.warn({ err, code }, 'room:close failed');
+      ack?.({ ok: false, error: 'Failed to close room' });
+    }
+  });
+
   socket.on(ClientEvents.GameEnd, async (_payload: unknown, ack?: Ack) => {
     const { code, role } = socket.data;
     if (!code || role !== 'host') return ack?.({ ok: false, error: 'Host only' });

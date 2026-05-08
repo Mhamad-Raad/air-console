@@ -6,6 +6,7 @@ export const ClientEvents = {
   RoomJoin: 'room:join',
   RoomLeave: 'room:leave',
   RoomKick: 'room:kick',
+  RoomClose: 'room:close',
   PlayerUpdate: 'player:update',
   PlayerSet: 'player:set', // host changes another player (e.g. team assignment)
   GameStart: 'game:start',
@@ -19,6 +20,7 @@ export const ServerEvents = {
   PlayerJoined: 'player:joined',
   PlayerLeft: 'player:left',
   PlayerKicked: 'player:kicked',
+  RoomClosed: 'room:closed',
   GameState: 'game:state',
   GameEnded: 'game:ended',
 } as const;
