@@ -1,13 +1,8 @@
 // Dominos engine — server-authoritative.
-// Implements the contract every game must follow so the realtime layer
-// can stay generic and games can be added by dropping in a folder.
+// Skeleton: the protocol seam is what matters for Phase 2; full rules land
+// in Phase 4.
 
-export interface GameEngine<TState, TAction> {
-  init(playerIds: string[]): TState;
-  applyAction(state: TState, playerId: string, action: TAction): TState;
-  view(state: TState, playerId: string): unknown;
-  isFinished(state: TState): boolean;
-}
+import type { GameEngine } from '../engine.js';
 
 export interface DominosState {
   phase: 'dealing' | 'playing' | 'finished';
@@ -33,7 +28,7 @@ export const DominosEngine: GameEngine<DominosState, DominosAction> = {
   },
 
   applyAction(state) {
-    // TODO: implement real rules
+    // TODO: implement real rules in Phase 4
     return state;
   },
 
@@ -48,7 +43,21 @@ export const DominosEngine: GameEngine<DominosState, DominosAction> = {
     };
   },
 
+  hostView(state) {
+    // Host sees the board, turn, and hand sizes — never tile values.
+    return {
+      ...state,
+      hands: Object.fromEntries(
+        Object.entries(state.hands).map(([id, tiles]) => [id, tiles.length]),
+      ),
+    };
+  },
+
   isFinished(state) {
     return state.phase === 'finished';
+  },
+
+  result(state) {
+    return state.winner ? { winnerId: state.winner } : null;
   },
 };
