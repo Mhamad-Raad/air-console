@@ -7,6 +7,7 @@ import { ServerEvents } from '../events.js';
 import { logger } from '../../lib/logger.js';
 import { RoomService } from '../../modules/rooms/room.service.js';
 import type { Room } from '../../modules/rooms/room.types.js';
+import { GameRuntime, type GameRecord } from '../../games/game.runtime.js';
 import { getIO } from '../socket.js';
 import type { AppSocket } from '../socketContext.js';
 
@@ -30,6 +31,33 @@ export async function broadcastState(code: string, room?: Room): Promise<void> {
  */
 export function emitToRoom(code: string, event: ServerEvent, payload: unknown): void {
   getIO().to(channel(code)).emit(event, payload);
+}
+
+/**
+ * Fan out per-player projections of a game record. Each connected player
+ * receives a state filtered through `engine.view(state, playerId)`; the host
+ * receives the full host view. Saves having to reimplement this per-game.
+ */
+export function broadcastGameState(room: Room, record: GameRecord): void {
+  const io = getIO();
+  for (const player of room.players) {
+    if (!player.socketId) continue;
+    const sock = io.sockets.sockets.get(player.socketId);
+    if (!sock) continue;
+    sock.emit(ServerEvents.GameState, {
+      slug: record.slug,
+      view: GameRuntime.viewFor(record, player.id),
+      updatedAt: record.updatedAt,
+    });
+  }
+  if (room.hostSocketId) {
+    const host = io.sockets.sockets.get(room.hostSocketId);
+    host?.emit(ServerEvents.GameState, {
+      slug: record.slug,
+      view: GameRuntime.hostView(record),
+      updatedAt: record.updatedAt,
+    });
+  }
 }
 
 interface HostContext {

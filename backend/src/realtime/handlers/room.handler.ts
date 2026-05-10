@@ -11,9 +11,17 @@ import {
 import { logger } from '../../lib/logger.js';
 import { RoomService } from '../../modules/rooms/room.service.js';
 import { JoinRoomSchema, PlayerPatchSchema } from '../../modules/rooms/room.schema.js';
+import { GameRuntime } from '../../games/game.runtime.js';
 import { getIO } from '../socket.js';
 import type { AppSocket } from '../socketContext.js';
-import { broadcastState, channel, requireHost, runHandler, type Ack } from './utils.js';
+import {
+  broadcastGameState,
+  broadcastState,
+  channel,
+  requireHost,
+  runHandler,
+  type Ack,
+} from './utils.js';
 
 export function registerRoomHandlers(socket: AppSocket): void {
   socket.on(ClientEvents.HostClaim, (payload: HostClaimPayload, ack?: Ack) =>
@@ -117,7 +125,9 @@ export function registerRoomHandlers(socket: AppSocket): void {
       const ctx = requireHost(socket);
       if (!ctx) throw new Error('Host only');
       const room = await RoomService.startGame(ctx.code);
+      const record = await GameRuntime.start(room);
       await broadcastState(ctx.code, room);
+      broadcastGameState(room, record);
       return { room };
     }, ack),
   );
@@ -127,6 +137,8 @@ export function registerRoomHandlers(socket: AppSocket): void {
       const ctx = requireHost(socket);
       if (!ctx) throw new Error('Host only');
       const room = await RoomService.endGame(ctx.code);
+      // Game record persistence (Postgres Match row) lands in the next commit.
+      await GameRuntime.clear(ctx.code);
       await broadcastState(ctx.code, room);
       return { room };
     }, ack),

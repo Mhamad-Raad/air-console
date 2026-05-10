@@ -21,8 +21,12 @@ export const ServerEvents = {
   PlayerLeft: 'player:left',
   PlayerKicked: 'player:kicked',
   RoomClosed: 'room:closed',
+  /** Per-player projection of the current game state. Sent on start + after each action. */
   GameState: 'game:state',
+  /** Match finished — payload carries the result and the host transitions UI. */
   GameEnded: 'game:ended',
+  /** Action rejected by the engine; sent only to the offending player. */
+  GameActionError: 'game:actionError',
 } as const;
 
 export type ClientEvent = (typeof ClientEvents)[keyof typeof ClientEvents];
