@@ -39,6 +39,8 @@
     "teamBShort": "ب",
     "ready": "ئامادە",
     "notReady": "ئامادە نیە",
+    "disconnected": "پەیوەندی پچڕاوە",
+    "reconnecting": "گەڕانەوەی پەیوەندی…",
     "startGame": "دەستپێکردنی یاری",
     "needMorePlayers": "پێویست بە لانیکەم {{min}} یاریزان",
     "needAllReady": "پێویستە هەموو یاریزانان ئامادە بن",

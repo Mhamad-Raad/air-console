@@ -254,9 +254,27 @@ function PlayerRow({
           <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
             <StatusDot
               on={player.isReady}
-              label={player.isReady ? t('host.ready') : t('host.notReady')}
+              tone={
+                player.disconnectedAt ? 'warn' : player.isReady ? 'on' : 'off'
+              }
+              label={
+                player.disconnectedAt
+                  ? t('host.reconnecting')
+                  : player.isReady
+                  ? t('host.ready')
+                  : t('host.notReady')
+              }
             />
-            <span className="truncate">{player.name}</span>
+            <span
+              className={`truncate ${player.disconnectedAt ? 'text-white/40 italic' : ''}`}
+            >
+              {player.name}
+              {player.disconnectedAt && (
+                <span className="ml-2 text-xs text-amber-400/80 not-italic">
+                  · {t('host.disconnected')}
+                </span>
+              )}
+            </span>
           </span>
           {showTeams && (
             <span className="flex shrink-0 gap-1">

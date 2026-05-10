@@ -58,6 +58,7 @@ export const RoomService = {
       // Re-joining: keep existing flags so reconnect doesn't reset state.
       exists.socketId = player.socketId;
       exists.name = player.name;
+      delete exists.disconnectedAt;
     } else {
       room.players.push({
         team: null,
@@ -90,6 +91,24 @@ export const RoomService = {
     if (patch.isReady !== undefined) player.isReady = patch.isReady;
     if (patch.locale !== undefined) player.locale = patch.locale;
 
+    room.updatedAt = Date.now();
+    await RoomRepository.save(room);
+    return room;
+  },
+
+  /**
+   * Mark a player as disconnected without removing their seat. The sweeper
+   * removes them once `disconnectedAt` is older than the grace period.
+   * Reconnect via addPlayer with the same playerId clears the flag.
+   */
+  async markDisconnected(code: string, playerId: string): Promise<Room | null> {
+    const room = await RoomRepository.get(code);
+    if (!room) return null;
+    const player = room.players.find((p) => p.id === playerId);
+    if (!player) return null;
+    player.disconnectedAt = Date.now();
+    // Stale socketId — until they reconnect we can't reach them.
+    delete player.socketId;
     room.updatedAt = Date.now();
     await RoomRepository.save(room);
     return room;

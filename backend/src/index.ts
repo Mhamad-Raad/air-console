@@ -2,6 +2,7 @@ import { buildServer } from './server.js';
 import { env } from './config/env.js';
 import { logger } from './lib/logger.js';
 import { attachSocketIO } from './realtime/socket.js';
+import { stopDisconnectSweeper } from './realtime/disconnect.sweeper.js';
 
 async function main() {
   const app = await buildServer();
@@ -17,6 +18,7 @@ async function main() {
 
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'shutting down');
+    stopDisconnectSweeper();
     await app.close();
     process.exit(0);
   };

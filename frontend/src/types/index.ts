@@ -24,6 +24,8 @@ export interface Player {
   isReady: boolean;
   locale: Locale;
   joinedAt: number;
+  /** Set when the player's socket dropped; cleared on reconnect within grace. */
+  disconnectedAt?: number;
 }
 
 export interface PlayerPatch {

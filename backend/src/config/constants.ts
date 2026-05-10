@@ -15,4 +15,8 @@ export const ROOM = {
 export const PLAYER = {
   NAME_MIN_LENGTH: 1,
   NAME_MAX_LENGTH: 24,
+  /** Seconds we keep a disconnected player's seat before removing them. */
+  DISCONNECT_GRACE_SECONDS: 30,
+  /** How often the sweeper scans rooms for timed-out disconnects. */
+  DISCONNECT_SWEEP_INTERVAL_SECONDS: 10,
 } as const;

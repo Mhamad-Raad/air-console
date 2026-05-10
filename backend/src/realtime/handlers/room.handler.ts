@@ -53,6 +53,20 @@ export function registerRoomHandlers(socket: AppSocket): void {
       });
       await socket.join(channel(payload.code));
       await broadcastState(payload.code, room);
+
+      // Reconnect into an in-game room: catch this socket up to the live
+      // game state so the player doesn't see a blank UI for an action cycle.
+      if (room.phase === 'in_game') {
+        const record = await GameRuntime.get(room.code);
+        if (record) {
+          socket.emit(ServerEvents.GameState, {
+            slug: record.slug,
+            view: GameRuntime.viewFor(record, playerId),
+            updatedAt: record.updatedAt,
+          });
+        }
+      }
+
       return { room, playerId };
     }, ack),
   );
@@ -170,7 +184,9 @@ export function registerRoomHandlers(socket: AppSocket): void {
     const { code, role, playerId } = socket.data;
     if (!code) return;
     if (role === 'player' && playerId) {
-      const room = await RoomService.removePlayer(code, playerId);
+      // Don't drop the seat — mark the player and let the sweeper remove
+      // them only if they fail to come back inside the grace window.
+      const room = await RoomService.markDisconnected(code, playerId);
       if (room) await broadcastState(code, room);
     }
     // Host disconnect: leave room alive so reconnect or claim can pick it back up.

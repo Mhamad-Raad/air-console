@@ -39,6 +39,8 @@
     "teamBShort": "ب",
     "ready": "جاهز",
     "notReady": "غير جاهز",
+    "disconnected": "غير متصل",
+    "reconnecting": "إعادة الاتصال…",
     "startGame": "ابدأ اللعبة",
     "needMorePlayers": "تحتاج على الأقل {{min}} لاعبين",
     "needAllReady": "يجب أن يكون جميع اللاعبين جاهزين",

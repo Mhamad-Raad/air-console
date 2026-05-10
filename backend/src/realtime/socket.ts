@@ -4,6 +4,7 @@ import { env, corsOrigins } from '../config/env.js';
 import { logger } from '../lib/logger.js';
 import { registerRoomHandlers } from './handlers/room.handler.js';
 import { registerGameHandlers } from './handlers/game.handler.js';
+import { startDisconnectSweeper } from './disconnect.sweeper.js';
 import type { AppServer, AppSocket, AppSocketData } from './socketContext.js';
 
 let io: AppServer | null = null;
@@ -28,5 +29,6 @@ export function attachSocketIO(app: FastifyInstance): AppServer {
     // disconnect logic is in one place.
   });
 
+  startDisconnectSweeper();
   return io;
 }

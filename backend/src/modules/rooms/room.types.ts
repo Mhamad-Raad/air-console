@@ -9,6 +9,11 @@ export interface Player {
   isReady: boolean;
   locale: Locale;
   joinedAt: number;
+  /**
+   * Wall-clock ms of the most recent disconnect. Cleared on rejoin.
+   * The sweeper removes players whose timestamp is older than the grace cutoff.
+   */
+  disconnectedAt?: number;
 }
 
 export interface PlayerPatch {

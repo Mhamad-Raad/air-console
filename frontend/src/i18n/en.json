@@ -39,6 +39,8 @@
     "teamBShort": "B",
     "ready": "Ready",
     "notReady": "Not ready",
+    "disconnected": "Disconnected",
+    "reconnecting": "Reconnecting…",
     "startGame": "Start game",
     "needMorePlayers": "Need at least {{min}} players",
     "needAllReady": "All players must be ready",
