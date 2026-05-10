@@ -76,5 +76,22 @@
     "english": "English",
     "arabic": "العربية",
     "kurdish": "کوردی"
+  },
+  "games": {
+    "noRenderer": "هیچ ڕووکارێک تۆمار نەکراوە بۆ ئەم یارییە ({{slug}}).",
+    "loading": "ئامادەکردنی یاری…",
+    "dominos": {
+      "boardLabel": "تەختە",
+      "boardEmpty": "هێشتا هیچ پارچەیەک نەلێکراوە.",
+      "tilesRemaining_one": "{{count}} پارچە",
+      "tilesRemaining_other": "{{count}} پارچە",
+      "theirTurn": "نۆرەکەیەتی",
+      "yourTurn": "نۆرەکەتە",
+      "waitingForTurn": "چاوەڕێی نۆرەکەت…",
+      "yourHand": "دەستەکەت",
+      "handEmpty": "هێشتا هیچ پارچەیەک نەدراوە.",
+      "pass": "تێپەڕاندن",
+      "winner": "{{name}} براوەیە!"
+    }
   }
 }

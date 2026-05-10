@@ -6,6 +6,7 @@ import { useSocket } from '../hooks/useSocket';
 import { useSocketEvent } from '../hooks/useSocketEvent';
 import { useEmit } from '../hooks/useEmit';
 import { useRoom } from '../hooks/useRoom';
+import { useGameState, useGameStateListener } from '../hooks/useGameState';
 import { Button } from '../components/ui/Button';
 import { InlineConfirm } from '../components/ui/InlineConfirm';
 import { Pill } from '../components/ui/Pill';
@@ -14,6 +15,7 @@ import { RouteHeader } from '../components/ui/RouteHeader';
 import { api } from '../lib/api';
 import { ClientEvents, ServerEvents } from '../lib/events';
 import { TIMING } from '../lib/constants';
+import { getRenderer } from '../games/registry';
 import type { GameCatalogEntry, Player, Room, Team } from '../types';
 
 const TEAM_TONE: Record<Team, 'sky' | 'amber'> = { A: 'sky', B: 'amber' };
@@ -29,6 +31,10 @@ export default function Host() {
   const [startError, setStartError] = useState<string | null>(null);
   const [pendingKick, setPendingKick] = useState<string | null>(null);
   const [confirmingLeave, setConfirmingLeave] = useState(false);
+
+  // Register the game:state listener at route mount so the renderer never
+  // misses the catch-up snapshot the server sends right after a rejoin.
+  useGameStateListener();
 
   const joinUrl = `${window.location.origin}/join/${code}`;
 
@@ -111,23 +117,7 @@ export default function Host() {
 
   // --- render: in-game ---
   if (room?.phase === 'in_game') {
-    return (
-      <main className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-sm uppercase tracking-widest text-white/40">{t('host.inGame')}</p>
-        <h1 className="text-4xl font-bold">{t('host.inGamePlaceholder')}</h1>
-        <ul className="mt-4 grid grid-cols-2 gap-2">
-          {players.map((p) => (
-            <li key={p.id} className="rounded-lg bg-surface px-3 py-2 text-sm">
-              {p.name}
-              {p.team && <span className="ml-2 text-white/40">· {t(`host.team${p.team}`)}</span>}
-            </li>
-          ))}
-        </ul>
-        <Button variant="secondary" onClick={endGame} className="mt-6">
-          {t('host.endGame')}
-        </Button>
-      </main>
-    );
+    return <HostGameView room={room} onEndGame={endGame} />;
   }
 
   // --- render: lobby ---
@@ -214,6 +204,32 @@ export default function Host() {
         )}
         {startError && <p className="text-center text-xs text-red-400">{startError}</p>}
       </div>
+    </main>
+  );
+}
+
+interface HostGameViewProps {
+  room: Room;
+  onEndGame: () => void;
+}
+
+function HostGameView({ room, onEndGame }: HostGameViewProps) {
+  const { t } = useTranslation();
+  const { view, slug } = useGameState();
+  const renderer = getRenderer(room.gameSlug);
+
+  return (
+    <main className="flex min-h-full flex-col items-center gap-6 p-8">
+      {!renderer ? (
+        <p className="text-amber-400">{t('games.noRenderer', { slug: room.gameSlug })}</p>
+      ) : view && slug === room.gameSlug ? (
+        <renderer.HostView view={view} room={room} />
+      ) : (
+        <p className="text-white/60">{t('games.loading')}</p>
+      )}
+      <Button variant="secondary" onClick={onEndGame} className="mt-4">
+        {t('host.endGame')}
+      </Button>
     </main>
   );
 }

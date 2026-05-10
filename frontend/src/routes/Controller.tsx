@@ -5,12 +5,15 @@ import { useSocket } from '../hooks/useSocket';
 import { useSocketEvent } from '../hooks/useSocketEvent';
 import { useEmit } from '../hooks/useEmit';
 import { useMe, useRoom } from '../hooks/useRoom';
+import { useGameState, useGameStateListener } from '../hooks/useGameState';
+import { useGameAction } from '../hooks/useGameAction';
 import { Button } from '../components/ui/Button';
 import { LanguageSwitcher } from '../components/ui/LanguageSwitcher';
 import { ClientEvents, ServerEvents } from '../lib/events';
 import { STORAGE_KEYS, TIMING, PLAYER as PLAYER_LIMITS } from '../lib/constants';
 import { type Locale } from '../i18n';
-import type { Room } from '../types';
+import { getRenderer } from '../games/registry';
+import type { Player, Room } from '../types';
 
 const PLAYER_ID_KEY = STORAGE_KEYS.PLAYER_ID;
 const nameKey = STORAGE_KEYS.ROOM_NAME;
@@ -23,6 +26,10 @@ export default function Controller() {
   const emit = useEmit();
   const { room, setRoom, reset } = useRoom();
   const me = useMe();
+
+  // Register the game:state listener at route mount so the renderer never
+  // misses the catch-up snapshot the server sends right after a rejoin.
+  useGameStateListener();
 
   const [storedName, setStoredName] = useState(
     () => localStorage.getItem(nameKey(code)) ?? '',
@@ -123,20 +130,8 @@ export default function Controller() {
   }
 
   // --- render ---
-  if (room?.phase === 'in_game') {
-    return (
-      <main className="mx-auto flex min-h-full max-w-sm flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-sm uppercase tracking-widest text-white/40">
-          {t('controller.inGameTitle')}
-        </p>
-        <h1 className="text-3xl font-bold">{t('controller.inGamePlaceholder')}</h1>
-        {team && (
-          <p className="text-sm text-white/60">
-            {t('controller.yourTeam')}: {t(`host.team${team}`)}
-          </p>
-        )}
-      </main>
-    );
+  if (room?.phase === 'in_game' && me) {
+    return <ControllerGameView room={room} me={me} />;
   }
 
   return (
@@ -210,6 +205,32 @@ export default function Controller() {
       >
         {isReady ? t('controller.cancelReady') : t('controller.imReady')}
       </Button>
+    </main>
+  );
+}
+
+interface ControllerGameViewProps {
+  room: Room;
+  me: Player;
+}
+
+function ControllerGameView({ room, me }: ControllerGameViewProps) {
+  const { t } = useTranslation();
+  const { view, slug } = useGameState();
+  const emit = useGameAction();
+  const renderer = getRenderer(room.gameSlug);
+
+  return (
+    <main className="mx-auto flex min-h-full max-w-sm flex-col items-center justify-center gap-4 p-6 text-center">
+      {!renderer ? (
+        <p className="text-amber-400">
+          {t('games.noRenderer', { slug: room.gameSlug })}
+        </p>
+      ) : view && slug === room.gameSlug ? (
+        <renderer.ControllerView view={view} me={me} room={room} emit={emit} />
+      ) : (
+        <p className="text-white/60">{t('games.loading')}</p>
+      )}
     </main>
   );
 }

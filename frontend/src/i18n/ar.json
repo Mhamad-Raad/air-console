@@ -76,5 +76,22 @@
     "english": "English",
     "arabic": "العربية",
     "kurdish": "کوردی"
+  },
+  "games": {
+    "noRenderer": "لا توجد واجهة مسجّلة لهذه اللعبة ({{slug}}).",
+    "loading": "جاري إعداد اللعبة…",
+    "dominos": {
+      "boardLabel": "اللوحة",
+      "boardEmpty": "لم تُلعب أي قطعة بعد.",
+      "tilesRemaining_one": "{{count}} قطعة",
+      "tilesRemaining_other": "{{count}} قطع",
+      "theirTurn": "دوره",
+      "yourTurn": "دورك",
+      "waitingForTurn": "بانتظار دورك…",
+      "yourHand": "يدك",
+      "handEmpty": "لم تُوزع أي قطع بعد.",
+      "pass": "تمرير",
+      "winner": "{{name}} فاز!"
+    }
   }
 }

@@ -188,6 +188,20 @@ async function main() {
   if (!Array.isArray(catchUp.view.hands[aId])) fail('catch-up view missing own hand');
   pass('rejoiner received catch-up game:state');
 
+  // 7b. Player A dispatches a game:action; expect a fresh game:state on
+  // both controllers and the host (server-authoritative round-trip).
+  log('player A emits game:action {type:"pass"}…');
+  const aActionEcho = waitFor(playerA2, ServerEvents.GameState, () => true, 3000);
+  const bActionEcho = waitFor(playerB, ServerEvents.GameState, () => true, 3000);
+  const hostActionEcho = waitFor(host, ServerEvents.GameState, () => true, 3000);
+  await emit(playerA2, ClientEvents.GameAction, { type: 'pass' });
+  const [aEcho, bEcho, hEcho] = await Promise.all([aActionEcho, bActionEcho, hostActionEcho]);
+  // Shape-check the host vs. player view distinction one more time post-action.
+  if (typeof hEcho.view.hands[aId] !== 'number') fail('post-action host view should be sizes');
+  if (!Array.isArray(aEcho.view.hands[aId])) fail('post-action A view should be array');
+  if (!Array.isArray(bEcho.view.hands[bId])) fail('post-action B view should be array');
+  pass('game:action round-trip rebroadcasts per-player game:state');
+
   // 8. Cleanup. Close the room then let socket.io drain naturally —
   // explicit process.exit during shutdown can trip a libuv assertion on
   // Windows.

@@ -76,5 +76,22 @@
     "english": "English",
     "arabic": "العربية",
     "kurdish": "کوردی"
+  },
+  "games": {
+    "noRenderer": "No renderer registered for this game ({{slug}}).",
+    "loading": "Setting up the game…",
+    "dominos": {
+      "boardLabel": "Board",
+      "boardEmpty": "No tiles played yet.",
+      "tilesRemaining_one": "{{count}} tile",
+      "tilesRemaining_other": "{{count}} tiles",
+      "theirTurn": "their turn",
+      "yourTurn": "Your turn",
+      "waitingForTurn": "Waiting for your turn…",
+      "yourHand": "Your hand",
+      "handEmpty": "No tiles dealt yet.",
+      "pass": "Pass",
+      "winner": "{{name}} wins!"
+    }
   }
 }
