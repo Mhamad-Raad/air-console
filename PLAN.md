@@ -24,47 +24,41 @@ We are **not** trying to clone AirConsole's full library. We're replicating the 
 - **Bilingual + RTL from day one.** Arabic is a first-class citizen, not a post-launch translation pass.
 - **Scalable from day one.** Redis for ephemeral room state (so we can horizontal-scale Socket.IO via the Redis adapter), Postgres for persistent records.
 
-## Current state (as of 2026-05-08)
+## Current state (as of 2026-05-11)
 
 **Phase 1 — Lobby completion + bilingual shell: ✅ DONE (incl. polish pass)**
+**Phase 2 — Game protocol + reconnection: ⏳ IN PROGRESS (4 of ~5 chunks done)**
 
-Polish pass that landed after the first review:
+Phase 2 commits landed:
 
-- Backend handler boilerplate extracted: `requireHost`, `runHandler`, and a `broadcastState` that accepts a freshly-written room (cuts Redis traffic ~50% on hot paths).
-- Disconnect-during-join race fixed (socket context set before write).
-- Dead `Player.isHost` field removed (host tracked via `Room.hostSocketId`).
-- Frontend event-name strings replaced with imported constants from `lib/events.ts`.
-- New hooks: `useSocketEvent`, `useEmit`, `useRoom`, `useMe`.
-- New UI primitives: `InlineConfirm`, `Pill`, `StatusDot`, `RouteHeader`.
-- Controller's `useEffect` split — language change no longer triggers leave/rejoin.
-- `storedName` is proper React state; default name is localised (`controller.defaultName`).
-- Host's "leave room" no longer double-navigates (timeout cleared on ack).
-- Magic numbers consolidated in `backend/src/config/constants.ts` and `frontend/src/lib/constants.ts`.
-- Three locales: English, Arabic, Kurdish Sorani — all RTL-aware.
+- Backend `GameEngine<TState, TAction>` interface extracted to `games/engine.ts`; new `games/registry.ts` maps slug → engine. Adding a game on the backend = drop a folder + register.
+- `GameRuntime` (`games/game.runtime.ts`) owns the per-room game record in Redis under `game:{code}` (separate from `room:{code}` so room broadcasts stay small). Handles init, action dispatch, per-player view projection, and cleanup.
+- `game:start` / `game:action` / `game:end` realtime handlers wired through the runtime. Per-player views fan out via `broadcastGameState` — host gets `engine.hostView`, players each get `engine.view(state, playerId)`. Engine errors on `game:action` surface to the offending player only via the new `game:actionError` event.
+- Replaced the broken `game.handler.ts` stub which had been duplicating `game:start` and emitting phantom events to `room:undefined`.
+- **Reconnection:** disconnect handlers no longer remove the seat — they mark `disconnectedAt` and clear `socketId`. A periodic sweeper (10s tick, 30s grace) removes anyone whose timestamp falls past the cutoff. Existing `addPlayer` reconnect path clears the flag, so a phone losing Wi-Fi for under 30s rejoins in-place with team/ready state intact.
+- Rejoining into a phase=in_game room receives a one-shot `game:state` directly so the player catches up without waiting for the next action.
+- Frontend per-game **renderer registry** (`frontend/src/games/registry.ts`): in-game branches on Host + Controller now delegate to `{ HostView, ControllerView }` bundles registered per slug. Dominos has a skeleton renderer showing board, hands, turn, and a Pass button (will be fleshed out in Phase 4 with real tile UI).
+- New frontend pieces: `useGameStateListener` (registered at route mount so the catch-up `game:state` from a rejoin doesn't get dropped), `useGameState` (read-only accessor), `useGameAction` (action emit), `stores/game.store.ts`, `StatusDot` grew a `tone='warn'` variant for disconnected players.
+- i18n: `games.dominos.*`, `games.{loading,noRenderer}`, `host.{disconnected,reconnecting}` in EN/AR/CKB.
+- Smoke test under `backend/tests/smoke/reconnection.mjs` covers claim → join → ready → start → mid-game disconnect → grace-period rejoin → catch-up game:state → action round-trip. `hold-room.mjs` is a sidecar for visual UI tests.
 
-Working end-to-end:
+Working end-to-end (Phase 1 + Phase 2):
 
-- Game catalog REST endpoint (`GET /api/games`)
-- Room creation (`POST /api/rooms`) with short alphabetic codes
-- Host screen claims room over WebSocket, displays QR
-- Phones join via QR → name → controller, names appear live on host
-- Disconnect cleanup (player drops off when phone closes browser)
-- Host can kick a player; kicked phone is sent home with a notice
-- Name + playerId persisted in `localStorage` so iPhone Safari closes don't wipe identity
-- Edit name from controller (inline, with save/cancel)
-- Ready toggle on each controller; ready dot per player on host
-- Team picker on host (cycle None → A → B); only shown when game.supportsTeams
-- Start game button gated by min-players + all-ready; transitions phase to `in_game`
-- In-game placeholder view on both host and controller
-- Full Arabic + English UI with RTL layout, language switcher in header, locale persisted per player
-- Smoke test covering full lobby flow including team assignment, ready, and game:start
+- Everything from Phase 1 (rooms, QR, lobby, teams, ready, language switching).
+- Server-authoritative game record per room, persisted in Redis with TTL.
+- Per-player game views — players never see other players' hidden state.
+- Reconnection within 30s preserves the player's seat, team, ready flag, and game state.
+- The host screen and controller phone both render the dominos engine state through the registry.
+- Game action round-trip (`game:action` → engine → broadcast).
 
-Not yet wired:
+Not yet wired (remaining for Phase 2 closure):
 
-- Reconnection after a brief network drop (currently treated as a fresh join)
-- Any actual gameplay — `dominos.engine.ts` is a skeleton
-- Frontend renderer module per game
-- Production deployment, env separation, monitoring
+- Postgres `Match` row persistence on `game:end` — deferred behind a host-Postgres-vs-Docker-Postgres conflict on port 5432; the code path is ready, just needs the conflict resolved.
+
+Carried over to later phases:
+
+- Real dominos rules — Phase 4 (engine.applyAction is currently a no-op).
+- Production deployment, env separation, monitoring — Phase 6.
 
 ## Architectural principles
 
