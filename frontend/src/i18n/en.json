@@ -95,6 +95,24 @@
       "handEmpty": "No tiles dealt yet.",
       "pass": "Pass",
       "winner": "{{name}} wins!"
+    },
+    "trivia": {
+      "title": "Trivia",
+      "questionOf": "Question {{n}} of {{total}}",
+      "answeredCount": "{{answered}}/{{total}} answered",
+      "lockedIn": "Locked in!",
+      "correct": "Correct!",
+      "wrong": "Wrong",
+      "noAnswer": "No answer",
+      "pointsGained": "+{{points}} points",
+      "yourScore": "Your score",
+      "finalScore": "Final score",
+      "waitingForNext": "Next question coming…",
+      "leaderboard": "Leaderboard",
+      "gameOver": "Game Over",
+      "youWin": "You win!",
+      "youRank": "You finished #{{rank}}",
+      "winner": "{{name}} wins!"
     }
   }
 }

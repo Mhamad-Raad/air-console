@@ -95,6 +95,24 @@
       "handEmpty": "هێشتا هیچ پارچەیەک نەدراوە.",
       "pass": "تێپەڕاندن",
       "winner": "{{name}} براوەیە!"
+    },
+    "trivia": {
+      "title": "پرسیار",
+      "questionOf": "پرسیاری {{n}} لە {{total}}",
+      "answeredCount": "{{answered}}/{{total}} وەڵامیان داوەتەوە",
+      "lockedIn": "وەڵامەکەت تۆمارکرا!",
+      "correct": "ڕاستە!",
+      "wrong": "هەڵە",
+      "noAnswer": "وەڵامت نەداوەتەوە",
+      "pointsGained": "+{{points}} خاڵ",
+      "yourScore": "خاڵەکانت",
+      "finalScore": "ئەنجامی کۆتایی",
+      "waitingForNext": "پرسیاری داهاتوو دێت…",
+      "leaderboard": "لیستی پێشەنگەکان",
+      "gameOver": "یاری کۆتایی هات",
+      "youWin": "تۆ بردتەوە!",
+      "youRank": "ڕیزبەندیت #{{rank}}",
+      "winner": "{{name}} بردیەوە!"
     }
   }
 }

@@ -6,11 +6,17 @@
 import type { GameRendererBundle } from './types';
 import { HostView as DominosHostView } from './dominos/HostView';
 import { ControllerView as DominosControllerView } from './dominos/ControllerView';
+import { HostView as TriviaHostView } from './trivia/HostView';
+import { ControllerView as TriviaControllerView } from './trivia/ControllerView';
 
 const registry: Record<string, GameRendererBundle> = {
   dominos: {
     HostView: DominosHostView as GameRendererBundle['HostView'],
     ControllerView: DominosControllerView as GameRendererBundle['ControllerView'],
+  },
+  trivia: {
+    HostView: TriviaHostView as GameRendererBundle['HostView'],
+    ControllerView: TriviaControllerView as GameRendererBundle['ControllerView'],
   },
 };
 

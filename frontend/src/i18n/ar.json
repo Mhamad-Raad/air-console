@@ -95,6 +95,24 @@
       "handEmpty": "لم تُوزع أي قطع بعد.",
       "pass": "تمرير",
       "winner": "{{name}} فاز!"
+    },
+    "trivia": {
+      "title": "أسئلة",
+      "questionOf": "السؤال {{n}} من {{total}}",
+      "answeredCount": "{{answered}}/{{total}} أجابوا",
+      "lockedIn": "تم تثبيت إجابتك!",
+      "correct": "إجابة صحيحة!",
+      "wrong": "خطأ",
+      "noAnswer": "لم تُجب",
+      "pointsGained": "+{{points}} نقطة",
+      "yourScore": "نقاطك",
+      "finalScore": "النتيجة النهائية",
+      "waitingForNext": "السؤال التالي قادم…",
+      "leaderboard": "لوحة النتائج",
+      "gameOver": "انتهت اللعبة",
+      "youWin": "لقد فزت!",
+      "youRank": "ترتيبك #{{rank}}",
+      "winner": "{{name}} فاز!"
     }
   }
 }
