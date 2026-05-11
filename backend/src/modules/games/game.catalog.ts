@@ -12,4 +12,14 @@ export const GAME_CATALOG: GameCatalogEntry[] = [
     requireReady: true,
     enabled: true,
   },
+  {
+    slug: 'trivia',
+    name: 'Iraqi Pop Quiz',
+    description: 'Fast-paced trivia. Faster correct answers score more.',
+    minPlayers: 1,
+    maxPlayers: 8,
+    supportsTeams: false,
+    requireReady: false,
+    enabled: true,
+  },
 ];

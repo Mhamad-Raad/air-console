@@ -4,9 +4,11 @@
 
 import type { AnyGameEngine } from './engine.js';
 import { DominosEngine } from './dominos/dominos.engine.js';
+import { TriviaEngine } from './trivia/trivia.engine.js';
 
 const registry = new Map<string, AnyGameEngine>([
   ['dominos', DominosEngine as AnyGameEngine],
+  ['trivia', TriviaEngine as AnyGameEngine],
 ]);
 
 export function getEngine(slug: string): AnyGameEngine | null {
