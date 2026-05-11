@@ -29,15 +29,20 @@ model Game {
 
 model Match {
   id        String    @id @default(cuid())
-  code      String    @unique
+  // Room code at the time of play. NOT unique — a single room can host
+  // many matches over its lifetime (rematch in lobby after game:end).
+  code      String
   gameId    String
   startedAt DateTime  @default(now())
   endedAt   DateTime?
+  // Snapshot of who played: [{ id, name, team }]. Stored as JSON because
+  // the Player records themselves are ephemeral in Redis.
   players   Json
   result    Json?
 
   game Game @relation(fields: [gameId], references: [id])
 
   @@index([gameId])
+  @@index([code])
   @@map("matches")
 }

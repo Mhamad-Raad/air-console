@@ -3,8 +3,10 @@ services:
     image: postgres:16-alpine
     container_name: airconsole-postgres
     restart: unless-stopped
+    # Bound to host 5433 to avoid colliding with a host Postgres install on
+    # 5432; the container itself still listens on its default 5432 inside.
     ports:
-      - '5432:5432'
+      - '5433:5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
