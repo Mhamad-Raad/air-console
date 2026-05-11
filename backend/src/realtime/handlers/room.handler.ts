@@ -12,6 +12,8 @@ import { logger } from '../../lib/logger.js';
 import { RoomService } from '../../modules/rooms/room.service.js';
 import { JoinRoomSchema, PlayerPatchSchema } from '../../modules/rooms/room.schema.js';
 import { GameRuntime } from '../../games/game.runtime.js';
+import { MatchRepository } from '../../modules/matches/match.repository.js';
+import { gameIdForSlug } from '../../modules/games/game.seeder.js';
 import { getIO } from '../socket.js';
 import type { AppSocket } from '../socketContext.js';
 import {
@@ -150,10 +152,45 @@ export function registerRoomHandlers(socket: AppSocket): void {
     runHandler('game:end', async () => {
       const ctx = requireHost(socket);
       if (!ctx) throw new Error('Host only');
+
+      // Snapshot for the Match row BEFORE we tear down: we need the
+      // pre-end room (player roster + teams) and the engine state's result.
+      const roomBefore = await RoomService.get(ctx.code);
+      const record = await GameRuntime.get(ctx.code);
+
       const room = await RoomService.endGame(ctx.code);
-      // Game record persistence (Postgres Match row) lands in the next commit.
       await GameRuntime.clear(ctx.code);
       await broadcastState(ctx.code, room);
+
+      // Persist the Match. Non-fatal if Postgres is unreachable — game
+      // play already ended, so the host shouldn't see an error toast.
+      if (record) {
+        try {
+          const gameId = await gameIdForSlug(record.slug);
+          if (!gameId) {
+            logger.warn(
+              { slug: record.slug },
+              'no Game row for slug; skipping Match persistence',
+            );
+          } else {
+            await MatchRepository.create({
+              code: ctx.code,
+              gameId,
+              startedAt: new Date(record.startedAt),
+              endedAt: new Date(),
+              players: roomBefore.players.map((p) => ({
+                id: p.id,
+                name: p.name,
+                team: p.team ?? null,
+              })),
+              result: GameRuntime.resultOf(record),
+            });
+          }
+        } catch (err) {
+          logger.warn({ err }, 'Match persistence failed; continuing');
+        }
+      }
+
       return { room };
     }, ack),
   );

@@ -27,7 +27,7 @@ We are **not** trying to clone AirConsole's full library. We're replicating the 
 ## Current state (as of 2026-05-11)
 
 **Phase 1 — Lobby completion + bilingual shell: ✅ DONE (incl. polish pass)**
-**Phase 2 — Game protocol + reconnection: ⏳ IN PROGRESS (4 of ~5 chunks done)**
+**Phase 2 — Game protocol + reconnection: ✅ DONE**
 
 Phase 2 commits landed:
 
@@ -40,7 +40,10 @@ Phase 2 commits landed:
 - Frontend per-game **renderer registry** (`frontend/src/games/registry.ts`): in-game branches on Host + Controller now delegate to `{ HostView, ControllerView }` bundles registered per slug. Dominos has a skeleton renderer showing board, hands, turn, and a Pass button (will be fleshed out in Phase 4 with real tile UI).
 - New frontend pieces: `useGameStateListener` (registered at route mount so the catch-up `game:state` from a rejoin doesn't get dropped), `useGameState` (read-only accessor), `useGameAction` (action emit), `stores/game.store.ts`, `StatusDot` grew a `tone='warn'` variant for disconnected players.
 - i18n: `games.dominos.*`, `games.{loading,noRenderer}`, `host.{disconnected,reconnecting}` in EN/AR/CKB.
-- Smoke test under `backend/tests/smoke/reconnection.mjs` covers claim → join → ready → start → mid-game disconnect → grace-period rejoin → catch-up game:state → action round-trip. `hold-room.mjs` is a sidecar for visual UI tests.
+- Postgres `Match` row persistence on `game:end`. The catalog is mirrored into Postgres at startup via `seedGames()` so `Match.gameId` FKs resolve. End-game snapshots the player roster (id/name/team) + the engine's `result()` and writes one row per match. Persistence is non-fatal: if Postgres is unreachable, gameplay continues uninterrupted and the failure is logged.
+- Docker Postgres bound to host port 5433 (not 5432) to coexist with a host Postgres install on the dev machine; `backend/.env` updated to match.
+- Initial Prisma migration applied (`20260511000517_init`).
+- Smoke test under `backend/tests/smoke/reconnection.mjs` covers claim → join → ready → start → mid-game disconnect → grace-period rejoin → catch-up game:state → action round-trip → game:end + Match-row persistence. `hold-room.mjs` is a sidecar for visual UI tests.
 
 Working end-to-end (Phase 1 + Phase 2):
 
@@ -50,10 +53,11 @@ Working end-to-end (Phase 1 + Phase 2):
 - Reconnection within 30s preserves the player's seat, team, ready flag, and game state.
 - The host screen and controller phone both render the dominos engine state through the registry.
 - Game action round-trip (`game:action` → engine → broadcast).
+- Finished games persist to Postgres as `Match` rows with player snapshots and engine result; ready for leaderboards / history in later phases.
 
-Not yet wired (remaining for Phase 2 closure):
+Notes on protocol divergence from the original plan:
 
-- Postgres `Match` row persistence on `game:end` — deferred behind a host-Postgres-vs-Docker-Postgres conflict on port 5432; the code path is ready, just needs the conflict resolved.
+- `game:end` transitions room phase back to `lobby`, not `ended` — keeping the room alive lets the same group rematch with one click (set ready → start). Matches the actual UX we want; PLAN's earlier `ended` wording is superseded.
 
 Carried over to later phases:
 

@@ -3,6 +3,8 @@ import { env } from './config/env.js';
 import { logger } from './lib/logger.js';
 import { attachSocketIO } from './realtime/socket.js';
 import { stopDisconnectSweeper } from './realtime/disconnect.sweeper.js';
+import { seedGames } from './modules/games/game.seeder.js';
+import { disconnectPrisma } from './lib/prisma.js';
 
 async function main() {
   const app = await buildServer();
@@ -16,10 +18,20 @@ async function main() {
     process.exit(1);
   }
 
+  // Mirror the in-code catalog into Postgres so finished matches can FK
+  // to a Game row. Non-fatal: lobby + live game work without Postgres.
+  await seedGames().catch((err) => {
+    logger.warn(
+      { err: err instanceof Error ? err.message : err },
+      'game catalog seed failed (Match persistence will be skipped)',
+    );
+  });
+
   const shutdown = async (signal: string) => {
     logger.info({ signal }, 'shutting down');
     stopDisconnectSweeper();
     await app.close();
+    await disconnectPrisma().catch(() => undefined);
     process.exit(0);
   };
 

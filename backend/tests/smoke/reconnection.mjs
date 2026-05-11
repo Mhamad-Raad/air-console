@@ -1,13 +1,14 @@
-// Phase 2 reconnection smoke test.
-// Verifies: a player who disconnects keeps their seat (with disconnectedAt
-// set), can rejoin within the grace window without losing state, and is
-// caught up to the live game:state if the room is in_game.
+// Phase 2 protocol smoke test.
+// Covers: per-player game:state fan-out, mid-game disconnect+grace-period
+// reconnect with catch-up game:state, game:action round-trip, and (when
+// Postgres is reachable) Match-row persistence on game:end.
 //
 // Run with: node tests/smoke/reconnection.mjs
-// Requires: backend running on http://localhost:3001
-//           Redis up; frontend node_modules present (we borrow socket.io-client)
+// Requires: backend on http://localhost:3001; Redis up; Postgres up for the
+//           Match-persistence assertion (skipped if it's not reachable).
 
 import { io } from '../../../frontend/node_modules/socket.io-client/build/esm/index.js';
+import { PrismaClient } from '../../node_modules/@prisma/client/default.js';
 
 const BACKEND = 'http://localhost:3001';
 
@@ -202,6 +203,48 @@ async function main() {
   if (!Array.isArray(bEcho.view.hands[bId])) fail('post-action B view should be array');
   pass('game:action round-trip rebroadcasts per-player game:state');
 
+  // 7c. Trigger game:end and verify a Match row landed in Postgres.
+  // We ack-emit GameEnd from the host then read back the row by code +
+  // recent timestamp.
+  log('host ends game…');
+  const beforeEnd = new Date();
+  await emit(host, 'game:end');
+
+  let prisma = null;
+  try {
+    prisma = new PrismaClient();
+    // Brief wait — the persistence is awaited inside the ack but we still
+    // give Postgres a beat to flush the visible row.
+    await new Promise((r) => setTimeout(r, 200));
+    const matches = await prisma.match.findMany({
+      where: { code, startedAt: { gte: new Date(beforeEnd.getTime() - 60_000) } },
+      orderBy: { startedAt: 'desc' },
+      take: 1,
+    });
+    if (matches.length === 0) fail('Match row not persisted');
+    const m = matches[0];
+    if (m.code !== code) fail(`Match.code = ${m.code}`);
+    if (!m.endedAt) fail('Match.endedAt not set');
+    const players = m.players;
+    if (!Array.isArray(players) || players.length !== 2) {
+      fail(`Match.players length = ${players?.length}`);
+    }
+    const ids = players.map((p) => p.id).sort();
+    const expected = [aId, bId].sort();
+    if (ids[0] !== expected[0] || ids[1] !== expected[1]) {
+      fail(`Match.players ids mismatch: ${JSON.stringify(ids)}`);
+    }
+    pass('game:end persisted Match row to Postgres with player snapshot');
+  } catch (err) {
+    if (err && /ECONNREFUSED|P1000|P1001/.test(String(err))) {
+      log('⚠ skipping Match-row assertion: Postgres unreachable');
+    } else {
+      throw err;
+    }
+  } finally {
+    if (prisma) await prisma.$disconnect().catch(() => {});
+  }
+
   // 8. Cleanup. Close the room then let socket.io drain naturally —
   // explicit process.exit during shutdown can trip a libuv assertion on
   // Windows.
@@ -211,7 +254,7 @@ async function main() {
   playerA2.disconnect();
   playerB.disconnect();
 
-  console.log('\n🎉 all reconnection assertions passed\n');
+  console.log('\n🎉 all phase 2 assertions passed\n');
 }
 
 main().catch((err) => {
