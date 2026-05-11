@@ -27,6 +27,29 @@ async function save(code: string, record: GameRecord): Promise<void> {
   await redis.set(key(code), JSON.stringify(record), 'EX', ROOM.TTL_SECONDS);
 }
 
+// In-process per-room serialization for the load-modify-save cycle. Two
+// players submitting within milliseconds of each other would otherwise
+// both load the pre-update state and the second save would clobber the
+// first (observed end-to-end with two Trivia bots submitting in
+// parallel). This is single-instance only — a multi-process backend
+// would need Redis WATCH/MULTI/EXEC or a distributed lock.
+const dispatchChains = new Map<string, Promise<unknown>>();
+
+function serializePerRoom<T>(code: string, work: () => Promise<T>): Promise<T> {
+  const prev = dispatchChains.get(code) ?? Promise.resolve();
+  const next = prev.then(work, work);
+  // Keep the chain alive across rejections — a failed dispatch must not
+  // poison subsequent ones for the same room.
+  dispatchChains.set(
+    code,
+    next.then(
+      () => undefined,
+      () => undefined,
+    ),
+  );
+  return next;
+}
+
 export const GameRuntime = {
   /** Build initial state for the room's game and persist it. */
   async start(room: Room): Promise<GameRecord> {
@@ -47,19 +70,23 @@ export const GameRuntime = {
   /**
    * Apply an action from a player. Returns the next record + whether the
    * match has finished. Throws on illegal moves; the caller wraps in an ack.
+   * Serialized per-room so concurrent submits from multiple phones don't
+   * race the load-modify-save cycle.
    */
   async dispatch(
     code: string,
     playerId: string,
     action: unknown,
   ): Promise<{ record: GameRecord; finished: boolean }> {
-    const record = await load(code);
-    if (!record) throw new NotFoundError('No active game');
-    const engine = requireEngine(record.slug);
-    const next = engine.applyAction(record.state, playerId, action);
-    const updated: GameRecord = { ...record, state: next, updatedAt: Date.now() };
-    await save(code, updated);
-    return { record: updated, finished: engine.isFinished(next) };
+    return serializePerRoom(code, async () => {
+      const record = await load(code);
+      if (!record) throw new NotFoundError('No active game');
+      const engine = requireEngine(record.slug);
+      const next = engine.applyAction(record.state, playerId, action);
+      const updated: GameRecord = { ...record, state: next, updatedAt: Date.now() };
+      await save(code, updated);
+      return { record: updated, finished: engine.isFinished(next) };
+    });
   },
 
   /** Per-player projection — controllers receive only what they're allowed to see. */

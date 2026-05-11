@@ -62,7 +62,7 @@ export function ControllerView({ view, me, emit }: ControllerViewProps<TriviaPla
       <TopBar view={view} t={t} />
 
       {view.phase === 'asking' && <Asking view={view} emit={emit} t={t} />}
-      {view.phase === 'reveal' && <Reveal view={view} t={t} />}
+      {view.phase === 'reveal' && <Reveal view={view} emit={emit} t={t} />}
       {view.phase === 'finished' && <Finished view={view} meId={me.id} t={t} />}
     </div>
   );
@@ -189,7 +189,25 @@ function Asking({
   );
 }
 
-function Reveal({ view, t }: { view: TriviaPlayerView; t: TFn }) {
+function Reveal({
+  view,
+  emit,
+  t,
+}: {
+  view: TriviaPlayerView;
+  emit: ControllerViewProps['emit'];
+  t: TFn;
+}) {
+  // Engine only advances reveal→next on an incoming action. Without this
+  // auto-tick the game would freeze after every reveal. Every controller
+  // schedules a tick when reveal ends; the first to arrive advances state
+  // server-side, the rest no-op through the same applyAction path.
+  useEffect(() => {
+    const delay = Math.max(0, view.phaseEndsAt - Date.now()) + 120;
+    const id = window.setTimeout(() => emit({ type: 'tick' }), delay);
+    return () => window.clearTimeout(id);
+  }, [view.phaseEndsAt, emit]);
+
   const q = view.question;
   const sub = view.yourSubmission;
   if (!q || q.correctIndex === undefined) return null;
