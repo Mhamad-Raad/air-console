@@ -217,13 +217,18 @@ function HostGameView({ room, onEndGame }: HostGameViewProps) {
   const { t } = useTranslation();
   const { view, slug } = useGameState();
   const renderer = getRenderer(room.gameSlug);
+  const HostView = renderer?.HostView;
 
   return (
     <main className="flex min-h-full flex-col items-center gap-6 p-8">
       {!renderer ? (
         <p className="text-amber-400">{t('games.noRenderer', { slug: room.gameSlug })}</p>
+      ) : !HostView ? (
+        // Phone-driven game with no host renderer — show a roster fallback
+        // so the screen isn't blank during play.
+        <PhoneDrivenFallback room={room} />
       ) : view && slug === room.gameSlug ? (
-        <renderer.HostView view={view} room={room} />
+        <HostView view={view} room={room} />
       ) : (
         <p className="text-white/60">{t('games.loading')}</p>
       )}
@@ -231,6 +236,27 @@ function HostGameView({ room, onEndGame }: HostGameViewProps) {
         {t('host.endGame')}
       </Button>
     </main>
+  );
+}
+
+function PhoneDrivenFallback({ room }: { room: Room }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex w-full max-w-3xl flex-col items-center gap-4 text-center">
+      <p className="text-sm uppercase tracking-widest text-white/40">{t('host.inGame')}</p>
+      <h1 className="text-3xl font-semibold">{t('games.phoneDrivenTitle')}</h1>
+      <p className="text-white/60">{t('games.phoneDrivenHint')}</p>
+      <ul className="mt-4 grid w-full grid-cols-2 gap-2">
+        {room.players.map((p) => (
+          <li key={p.id} className="rounded-lg bg-surface px-3 py-2 text-sm">
+            {p.name}
+            {p.team && (
+              <span className="ml-2 text-white/40">· {t(`host.team${p.team}`)}</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

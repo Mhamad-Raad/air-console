@@ -80,6 +80,9 @@
   "games": {
     "noRenderer": "No renderer registered for this game ({{slug}}).",
     "loading": "Setting up the game…",
+    "phoneDrivenTitle": "Check your phones",
+    "phoneDrivenHint": "This game is played on the phones — the screen is just here to keep score.",
+    "watchScreenHint": "Watch the big screen — no input needed from your phone right now.",
     "dominos": {
       "boardLabel": "Board",
       "boardEmpty": "No tiles played yet.",

@@ -219,6 +219,7 @@ function ControllerGameView({ room, me }: ControllerGameViewProps) {
   const { view, slug } = useGameState();
   const emit = useGameAction();
   const renderer = getRenderer(room.gameSlug);
+  const ControllerView = renderer?.ControllerView;
 
   return (
     <main className="mx-auto flex min-h-full max-w-sm flex-col items-center justify-center gap-4 p-6 text-center">
@@ -226,8 +227,12 @@ function ControllerGameView({ room, me }: ControllerGameViewProps) {
         <p className="text-amber-400">
           {t('games.noRenderer', { slug: room.gameSlug })}
         </p>
+      ) : !ControllerView ? (
+        // Host-driven game (e.g. trivia announcement mode) — phones just
+        // sit and watch the screen.
+        <p className="text-white/60">{t('games.watchScreenHint')}</p>
       ) : view && slug === room.gameSlug ? (
-        <renderer.ControllerView view={view} me={me} room={room} emit={emit} />
+        <ControllerView view={view} me={me} room={room} emit={emit} />
       ) : (
         <p className="text-white/60">{t('games.loading')}</p>
       )}

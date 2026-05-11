@@ -21,7 +21,19 @@ export interface ControllerViewProps<TView = unknown> {
   emit: (action: { type: string; data?: unknown }) => void;
 }
 
+/**
+ * Each game ships whichever screens it actually uses:
+ *  - Both — Dominos, Trivia, Tarneeb (board on host, hand/buttons on phone).
+ *  - ControllerView only — phone-driven games like Imposter or Tap Race;
+ *    the host falls back to a roster/status view so the screen still shows
+ *    that a game is running.
+ *  - HostView only — host-driven trivia/announcement modes; phones can be
+ *    presence-only via the lobby UI.
+ *
+ * Rendering is the only seam that's optional per game; the engine is
+ * always required server-side.
+ */
 export interface GameRendererBundle {
-  HostView: ComponentType<HostViewProps>;
-  ControllerView: ComponentType<ControllerViewProps>;
+  HostView?: ComponentType<HostViewProps>;
+  ControllerView?: ComponentType<ControllerViewProps>;
 }
