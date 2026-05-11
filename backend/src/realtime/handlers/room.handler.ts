@@ -12,8 +12,7 @@ import { logger } from '../../lib/logger.js';
 import { RoomService } from '../../modules/rooms/room.service.js';
 import { JoinRoomSchema, PlayerPatchSchema } from '../../modules/rooms/room.schema.js';
 import { GameRuntime } from '../../games/game.runtime.js';
-import { MatchRepository } from '../../modules/matches/match.repository.js';
-import { gameIdForSlug } from '../../modules/games/game.seeder.js';
+import { MatchService } from '../../modules/matches/match.service.js';
 import { getIO } from '../socket.js';
 import type { AppSocket } from '../socketContext.js';
 import {
@@ -153,8 +152,8 @@ export function registerRoomHandlers(socket: AppSocket): void {
       const ctx = requireHost(socket);
       if (!ctx) throw new Error('Host only');
 
-      // Snapshot for the Match row BEFORE we tear down: we need the
-      // pre-end room (player roster + teams) and the engine state's result.
+      // Snapshot the room + engine record BEFORE teardown — MatchService
+      // needs both to persist the result with the player roster intact.
       const roomBefore = await RoomService.get(ctx.code);
       const record = await GameRuntime.get(ctx.code);
 
@@ -162,34 +161,7 @@ export function registerRoomHandlers(socket: AppSocket): void {
       await GameRuntime.clear(ctx.code);
       await broadcastState(ctx.code, room);
 
-      // Persist the Match. Non-fatal if Postgres is unreachable — game
-      // play already ended, so the host shouldn't see an error toast.
-      if (record) {
-        try {
-          const gameId = await gameIdForSlug(record.slug);
-          if (!gameId) {
-            logger.warn(
-              { slug: record.slug },
-              'no Game row for slug; skipping Match persistence',
-            );
-          } else {
-            await MatchRepository.create({
-              code: ctx.code,
-              gameId,
-              startedAt: new Date(record.startedAt),
-              endedAt: new Date(),
-              players: roomBefore.players.map((p) => ({
-                id: p.id,
-                name: p.name,
-                team: p.team ?? null,
-              })),
-              result: GameRuntime.resultOf(record),
-            });
-          }
-        } catch (err) {
-          logger.warn({ err }, 'Match persistence failed; continuing');
-        }
-      }
+      if (record) await MatchService.recordEnd(ctx.code, roomBefore, record);
 
       return { room };
     }, ack),
@@ -212,6 +184,9 @@ export function registerRoomHandlers(socket: AppSocket): void {
           s.data = {};
         }
       }
+      // Also clear any in-flight game record so it doesn't leak in Redis
+      // until the TTL expires hours later.
+      await GameRuntime.clear(ctx.code);
       await RoomService.deleteRoom(ctx.code);
     }, ack),
   );

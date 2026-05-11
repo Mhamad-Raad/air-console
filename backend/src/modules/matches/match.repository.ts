@@ -2,9 +2,10 @@
 // game:end fires, at which point we copy a summary into Postgres for
 // history / leaderboards / analytics.
 
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma.js';
 
-interface MatchPlayerSnapshot {
+export interface MatchPlayerSnapshot {
   id: string;
   name: string;
   team: 'A' | 'B' | null;
@@ -21,19 +22,19 @@ export interface CreateMatchInput {
 
 export const MatchRepository = {
   async create(input: CreateMatchInput): Promise<{ id: string }> {
-    const row = await prisma.match.create({
+    return prisma.match.create({
       data: {
         code: input.code,
         gameId: input.gameId,
         startedAt: input.startedAt,
         endedAt: input.endedAt,
-        // Prisma `Json` accepts any JSON-serialisable value; cast so TS
-        // doesn't widen the type to Prisma.InputJsonValue paranoia.
-        players: input.players as unknown as object,
-        result: (input.result ?? null) as unknown as object,
+        players: input.players as unknown as Prisma.InputJsonValue,
+        result:
+          input.result === undefined || input.result === null
+            ? Prisma.JsonNull
+            : (input.result as Prisma.InputJsonValue),
       },
       select: { id: true },
     });
-    return row;
   },
 };

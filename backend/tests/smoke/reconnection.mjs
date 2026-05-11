@@ -3,12 +3,13 @@
 // reconnect with catch-up game:state, game:action round-trip, and (when
 // Postgres is reachable) Match-row persistence on game:end.
 //
-// Run with: node tests/smoke/reconnection.mjs
-// Requires: backend on http://localhost:3001; Redis up; Postgres up for the
-//           Match-persistence assertion (skipped if it's not reachable).
+// Run with `cd backend && node tests/smoke/reconnection.mjs`. Working
+// directory matters: PrismaClient resolves from backend/node_modules.
+// socket.io-client is intentionally borrowed from the frontend
+// node_modules since the backend doesn't depend on it.
 
 import { io } from '../../../frontend/node_modules/socket.io-client/build/esm/index.js';
-import { PrismaClient } from '../../node_modules/@prisma/client/default.js';
+import { PrismaClient } from '@prisma/client';
 
 const BACKEND = 'http://localhost:3001';
 

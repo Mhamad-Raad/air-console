@@ -23,7 +23,9 @@ export interface PlayerPatch {
   locale?: Locale;
 }
 
-export type RoomPhase = 'lobby' | 'in_game' | 'ended';
+// `endGame()` transitions back to 'lobby' (rematch UX); add an 'ended'
+// phase here only when a real post-game review screen needs it.
+export type RoomPhase = 'lobby' | 'in_game';
 
 export interface Room {
   code: string;
