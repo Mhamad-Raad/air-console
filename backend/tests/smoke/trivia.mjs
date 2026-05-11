@@ -117,26 +117,16 @@ async function main() {
   pass('game:start delivered asking-phase views without leaking answers');
 
   // 4. Play through all questions. Alice = correct, Bob = always 0.
+  // Between questions we sleep past the reveal window; the engine
+  // auto-advances reveal→asking the next time any action arrives, so
+  // alice's first submit on question i both rolls time forward and
+  // lodges her answer in a single applyAction.
   let bobCorrectCount = 0;
   for (let i = 0; i < ANSWER_KEY.length; i++) {
     if (i > 0) {
-      // wait out reveal from previous question
       await sleep(REVEAL_DURATION_MS + 150);
     }
 
-    // Wait for asking phase on this question. For i=0 we already have it
-    // from the initial game:start broadcast. For i>0 we expect to see
-    // a fresh asking view after our submits trigger reveal→next.
-    if (i > 0) {
-      await waitFor(
-        alice,
-        ServerEvents.GameState,
-        (s) => s.view.phase === 'asking' && s.view.currentIndex === i,
-        5000,
-      );
-    }
-
-    // Both submit. Alice picks correct, Bob picks 0.
     const correctIdx = ANSWER_KEY[i];
     if (correctIdx === 0) bobCorrectCount++;
 
@@ -151,7 +141,6 @@ async function main() {
     await emit(bob,   ClientEvents.GameAction, { type: 'submit', data: { choice: 0 } });
 
     const reveal = await revealForAlice;
-    // Reveal view should expose correctIndex + alice's submission result.
     if (reveal.view.question?.correctIndex !== correctIdx) {
       fail(`Q${i} reveal correctIndex ${reveal.view.question?.correctIndex} ≠ ${correctIdx}`);
     }
