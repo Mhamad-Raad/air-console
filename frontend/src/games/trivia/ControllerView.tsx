@@ -51,7 +51,9 @@ function colorFor(i: number): string {
     default: return 'bg-green-500';
   }
 }
-const CHOICE_LABELS = ['A', 'B', 'C', 'D'];
+// Shape per slot, matched 1:1 with the host's tiles. Tap shape on phone,
+// matching shape lights up on TV — language-independent affordance.
+const CHOICE_LABELS = ['▲', '◆', '●', '■'];
 
 export function ControllerView({ view, me, emit }: ControllerViewProps<TriviaPlayerView>) {
   const { t } = useTranslation();

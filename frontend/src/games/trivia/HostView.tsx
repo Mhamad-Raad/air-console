@@ -52,7 +52,10 @@ function colorFor(i: number): string {
     default: return 'bg-green-500';
   }
 }
-const CHOICE_LABELS = ['A', 'B', 'C', 'D'];
+// Kahoot's iconic phone↔TV link: a shape per slot, paired 1:1 with the
+// color in colorFor(). The player taps the shape on their phone; the
+// matching shape lights up on the host screen. No reading required.
+const CHOICE_LABELS = ['▲', '◆', '●', '■'];
 
 export function HostView({ view, room }: HostViewProps<TriviaHostView>) {
   const { t } = useTranslation();
@@ -160,7 +163,7 @@ function Asking({
             }}
             className={`rounded-2xl px-8 py-10 font-display text-3xl font-extrabold shadow-lg ${colorFor(i)}`}
           >
-            <span className="mr-3 opacity-70">{CHOICE_LABELS[i]}</span>
+            <span className="mr-4 text-4xl drop-shadow">{CHOICE_LABELS[i]}</span>
             {choice}
           </motion.div>
         ))}
@@ -216,7 +219,7 @@ function Reveal({
               transition={{ type: 'spring', stiffness: 280, damping: 18 }}
               className={`relative overflow-hidden rounded-2xl px-8 py-10 font-display text-3xl font-extrabold shadow-lg ${colorFor(i)} ${isCorrect ? 'ring-4 ring-white' : ''}`}
             >
-              <span className="mr-3 opacity-70">{CHOICE_LABELS[i]}</span>
+              <span className="mr-4 text-4xl drop-shadow">{CHOICE_LABELS[i]}</span>
               {choice}
               <span className="absolute right-4 top-3 text-sm opacity-80">
                 {counts[i] ?? 0}
