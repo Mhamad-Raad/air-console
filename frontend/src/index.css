@@ -10,10 +10,41 @@ body,
 
 body {
   font-family: 'Inter', system-ui, sans-serif;
+  /* Slow-drifting brand gradient. The 400% size + animated background
+     position is the cheap trick: no JS, no GPU thrash, just a long
+     keyframe scrolling a static gradient. */
+  background: linear-gradient(
+    135deg,
+    #0b0d12 0%,
+    #1a1340 30%,
+    #2d1660 55%,
+    #3a1078 80%,
+    #0b0d12 100%
+  );
+  background-size: 400% 400%;
+  animation: feel-bg-drift 24s ease-in-out infinite;
 }
 
 /* Arabic-language pages get Cairo automatically. i18n sets <html lang>
    so this is the natural switch point. */
 html[lang='ar'] body {
   font-family: 'Cairo', system-ui, sans-serif;
+}
+
+@keyframes feel-bg-drift {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    animation: none;
+  }
 }
