@@ -141,7 +141,7 @@ function Asking({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="text-center text-5xl font-bold leading-snug"
+        className="text-center font-display text-5xl font-extrabold leading-snug tracking-tight"
       >
         {q.text}
       </motion.h2>
@@ -158,7 +158,7 @@ function Asking({
               stiffness: 280,
               damping: 20,
             }}
-            className={`rounded-2xl px-8 py-10 text-3xl font-bold shadow-lg ${colorFor(i)}`}
+            className={`rounded-2xl px-8 py-10 font-display text-3xl font-extrabold shadow-lg ${colorFor(i)}`}
           >
             <span className="mr-3 opacity-70">{CHOICE_LABELS[i]}</span>
             {choice}
@@ -198,7 +198,7 @@ function Reveal({
         key={`${q.id}-reveal`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="text-center text-5xl font-bold leading-snug"
+        className="text-center font-display text-5xl font-extrabold leading-snug tracking-tight"
       >
         {q.text}
       </motion.h2>
@@ -214,7 +214,7 @@ function Reveal({
                 opacity: isCorrect ? 1 : 0.45,
               }}
               transition={{ type: 'spring', stiffness: 280, damping: 18 }}
-              className={`relative rounded-2xl px-8 py-10 text-3xl font-bold shadow-lg ${colorFor(i)} ${isCorrect ? 'ring-4 ring-white' : ''}`}
+              className={`relative overflow-hidden rounded-2xl px-8 py-10 font-display text-3xl font-extrabold shadow-lg ${colorFor(i)} ${isCorrect ? 'ring-4 ring-white' : ''}`}
             >
               <span className="mr-3 opacity-70">{CHOICE_LABELS[i]}</span>
               {choice}
@@ -287,9 +287,9 @@ function Leaderboard({
             >
               <span className="flex items-center gap-3">
                 <span className="w-6 text-white/40">{i + 1}.</span>
-                <span className="font-semibold">{playerName(entry.id)}</span>
+                <span className="font-display font-semibold">{playerName(entry.id)}</span>
               </span>
-              <span className="tabular-nums font-bold">
+              <span className="font-display font-extrabold tabular-nums">
                 <ScoreNumber value={entry.score} />
               </span>
             </motion.li>

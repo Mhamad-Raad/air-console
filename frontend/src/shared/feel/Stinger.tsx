@@ -50,8 +50,14 @@ export function Stinger({
             transition={{ type: 'spring', stiffness: 280, damping: 16 }}
             className="text-center px-8"
           >
-            <div className="text-7xl font-black text-white drop-shadow-lg">{text}</div>
-            {subtext && <div className="mt-3 text-xl text-white/70">{subtext}</div>}
+            <div className="font-display text-7xl font-extrabold tracking-tight text-white drop-shadow-lg">
+              {text}
+            </div>
+            {subtext && (
+              <div className="mt-3 font-display text-xl font-semibold text-white/80">
+                {subtext}
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}

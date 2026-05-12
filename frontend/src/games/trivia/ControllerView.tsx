@@ -170,7 +170,9 @@ function Asking({
             onClick={() => emit({ type: 'submit', data: { choice: i } })}
             className={`${colorFor(i)} h-24 flex-col text-lg`}
           >
-            <span className="text-2xl font-black">{CHOICE_LABELS[i]}</span>
+            <span className="font-display text-3xl font-extrabold leading-none">
+              {CHOICE_LABELS[i]}
+            </span>
             <span className="mt-1 text-sm font-medium opacity-90">{choice}</span>
           </Button>
         ))}
@@ -222,7 +224,7 @@ function Reveal({
         initial={{ scale: 0.6, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 320, damping: 18 }}
-        className={`rounded-2xl px-6 py-4 text-3xl font-black ${
+        className={`rounded-2xl px-6 py-4 font-display text-3xl font-extrabold ${
           correct ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
         }`}
       >
@@ -247,8 +249,9 @@ function Reveal({
         <p className="text-xs uppercase tracking-widest text-white/40">
           {t('games.trivia.yourScore')}
         </p>
-        <p className="mt-1 text-4xl font-black">
+        <p className="mt-1 font-display text-4xl font-extrabold">
           <ScoreNumber value={view.yourScore ?? 0} />
+
         </p>
       </div>
 
@@ -285,7 +288,7 @@ function Finished({
         <p className="text-xs uppercase tracking-widest text-white/40">
           {t('games.trivia.finalScore')}
         </p>
-        <p className="mt-1 text-5xl font-black">
+        <p className="mt-1 font-display text-5xl font-extrabold">
           <ScoreNumber value={myScore} />
         </p>
       </div>

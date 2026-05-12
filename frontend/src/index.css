@@ -7,3 +7,13 @@ body,
 #root {
   height: 100%;
 }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Arabic-language pages get Cairo automatically. i18n sets <html lang>
+   so this is the natural switch point. */
+html[lang='ar'] body {
+  font-family: 'Cairo', system-ui, sans-serif;
+}
