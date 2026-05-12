@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
@@ -80,10 +80,9 @@ function usePhaseSounds(phase: Phase) {
   useEffect(() => {
     if (prev.current !== phase) {
       if (phase === 'reveal') playSound('reveal');
-      if (phase === 'finished') {
-        playSound('win');
-        celebrate('epic');
-      }
+      // 'finished' suspense sweep — the win + celebrate fire later inside
+      // the drumroll when 1st place is revealed, not on phase entry.
+      if (phase === 'finished') playSound('reveal');
     }
     prev.current = phase;
   }, [phase]);
@@ -266,15 +265,135 @@ function Finished({
 }) {
   const ranked = view.result ?? [];
   const winner = ranked[0];
+  // Drumroll stage gate: 0 = suspense beat, 1 = 3rd revealed,
+  // 2 = 2nd revealed, 3 = 1st revealed (stinger fires here),
+  // 4 = remaining leaderboard fades in below.
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    const timers = [
+      window.setTimeout(() => setStage(1), 900),
+      window.setTimeout(() => setStage(2), 2100),
+      window.setTimeout(() => setStage(3), 3300),
+      window.setTimeout(() => setStage(4), 5000),
+    ];
+    return () => timers.forEach(window.clearTimeout);
+  }, []);
+
+  useEffect(() => {
+    if (stage === 1 || stage === 2) playSound('tickFinal');
+    if (stage === 3) {
+      playSound('win');
+      celebrate('epic');
+    }
+  }, [stage]);
+
   return (
     <div className="flex w-full flex-col items-center gap-6">
       <Stinger
-        show
-        text={t('games.trivia.gameOver')}
-        subtext={winner ? t('games.trivia.winner', { name: playerName(winner.playerId) }) : undefined}
-        sound={null /* stinger fired via celebrate+win in usePhaseSounds */}
+        show={stage === 3}
+        text={winner ? t('games.trivia.winner', { name: playerName(winner.playerId) }) : t('games.trivia.gameOver')}
+        sound={null}
       />
-      <Leaderboard scores={view.scores} playerName={playerName} t={t} />
+
+      <h2 className="font-display text-3xl font-extrabold tracking-tight text-white/90">
+        {t('games.trivia.leaderboard')}
+      </h2>
+
+      {/* Podium: 2nd | 1st | 3rd. Pedestals stay visible so layout is
+          stable; contents pop in 3rd → 2nd → 1st with stagger. */}
+      <div className="grid w-full max-w-3xl grid-cols-3 items-end gap-4">
+        <PodiumSlot
+          rank={2}
+          entry={ranked[1]}
+          revealed={stage >= 2}
+          height="h-40"
+          ringClass="ring-slate-300/70"
+          bgClass="bg-slate-300/15"
+          playerName={playerName}
+        />
+        <PodiumSlot
+          rank={1}
+          entry={ranked[0]}
+          revealed={stage >= 3}
+          height="h-56"
+          ringClass="ring-amber-300"
+          bgClass="bg-amber-400/20"
+          playerName={playerName}
+          crown
+        />
+        <PodiumSlot
+          rank={3}
+          entry={ranked[2]}
+          revealed={stage >= 1}
+          height="h-32"
+          ringClass="ring-orange-400/70"
+          bgClass="bg-orange-500/15"
+          playerName={playerName}
+        />
+      </div>
+
+      <AnimatePresence>
+        {stage >= 4 && ranked.length > 3 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-2xl"
+          >
+            <Leaderboard scores={view.scores} playerName={playerName} t={t} compact />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function PodiumSlot({
+  rank,
+  entry,
+  revealed,
+  height,
+  ringClass,
+  bgClass,
+  playerName,
+  crown = false,
+}: {
+  rank: 1 | 2 | 3;
+  entry?: { playerId: string; score: number };
+  revealed: boolean;
+  height: string;
+  ringClass: string;
+  bgClass: string;
+  playerName: (id: string) => string;
+  crown?: boolean;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <AnimatePresence>
+        {revealed && entry && (
+          <motion.div
+            key="contents"
+            initial={{ opacity: 0, y: 20, scale: 0.85 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 18 }}
+            className="flex flex-col items-center gap-1 text-center"
+          >
+            {crown && <div className="text-3xl">👑</div>}
+            <div className="font-display text-2xl font-extrabold leading-tight">
+              {playerName(entry.playerId)}
+            </div>
+            <div className="font-display text-3xl font-extrabold tabular-nums text-white">
+              <ScoreNumber value={entry.score} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <div
+        className={`flex w-full items-start justify-center rounded-t-xl ring-2 ${ringClass} ${bgClass} ${height} pt-3`}
+      >
+        <span className="font-display text-4xl font-extrabold text-white/80">
+          {rank}
+        </span>
+      </div>
     </div>
   );
 }
