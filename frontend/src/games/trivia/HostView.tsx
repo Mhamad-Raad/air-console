@@ -194,6 +194,7 @@ function Reveal({
     (_, i) =>
       Object.values(submissions).filter((s) => s.choice === i).length,
   );
+  const maxCount = Math.max(1, ...counts);
 
   return (
     <div className="flex w-full flex-col items-center gap-6">
@@ -209,6 +210,8 @@ function Reveal({
       <div className="grid w-full grid-cols-2 gap-4">
         {q.choices.map((choice, i) => {
           const isCorrect = i === q.correctIndex;
+          const count = counts[i] ?? 0;
+          const pct = count / maxCount;
           return (
             <motion.div
               key={`${q.id}-r-${i}`}
@@ -219,11 +222,29 @@ function Reveal({
               transition={{ type: 'spring', stiffness: 280, damping: 18 }}
               className={`relative overflow-hidden rounded-2xl px-8 py-10 font-display text-3xl font-extrabold shadow-lg ${colorFor(i)} ${isCorrect ? 'ring-4 ring-white' : ''}`}
             >
-              <span className="mr-4 text-4xl drop-shadow">{CHOICE_LABELS[i]}</span>
-              {choice}
-              <span className="absolute right-4 top-3 text-sm opacity-80">
-                {counts[i] ?? 0}
+              {/* Vote bar: grows from the bottom of the tile, height
+                  proportional to this option's share of the highest count.
+                  Uses translate so it doesn't reflow text. */}
+              <motion.div
+                aria-hidden
+                initial={{ scaleY: 0 }}
+                animate={{ scaleY: pct }}
+                transition={{ delay: 0.25, duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                style={{ transformOrigin: 'bottom' }}
+                className="absolute inset-x-0 bottom-0 h-full bg-white/15 pointer-events-none"
+              />
+              <span className="relative mr-4 text-4xl drop-shadow">
+                {CHOICE_LABELS[i]}
               </span>
+              <span className="relative">{choice}</span>
+              <motion.span
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="absolute right-4 top-3 rounded-full bg-black/40 px-2 py-0.5 font-display text-sm tabular-nums"
+              >
+                {count}
+              </motion.span>
             </motion.div>
           );
         })}
