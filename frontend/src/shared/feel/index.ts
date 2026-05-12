@@ -9,6 +9,7 @@ export * from './tokens';
 export * from './audio';
 export * from './haptics';
 export * from './confetti';
+export { buildSynthPack } from './synthPack';
 export { Button } from './Button';
 export { Countdown } from './Countdown';
 export { ScoreNumber } from './ScoreNumber';

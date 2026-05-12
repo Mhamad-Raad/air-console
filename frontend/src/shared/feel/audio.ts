@@ -8,16 +8,25 @@ import type { SoundKey } from './tokens';
 // which is what we want during scaffolding.
 
 type SoundPack = Partial<Record<SoundKey, string>>;
+type LoadOpts = {
+  // Howler can't infer extension from a blob/data URL, so callers loading
+  // generated audio must pass a format hint (e.g. ['wav']).
+  format?: string[];
+};
 
 const sounds: Partial<Record<SoundKey, Howl>> = {};
 let masterVolume = 0.8;
 let muted = false;
 
-export function loadSoundPack(pack: SoundPack): void {
+export function loadSoundPack(pack: SoundPack, opts: LoadOpts = {}): void {
   for (const key of Object.keys(pack) as SoundKey[]) {
     const src = pack[key];
     if (!src) continue;
-    sounds[key] = new Howl({ src: [src], volume: masterVolume });
+    sounds[key] = new Howl({
+      src: [src],
+      volume: masterVolume,
+      ...(opts.format ? { format: opts.format } : {}),
+    });
   }
 }
 
