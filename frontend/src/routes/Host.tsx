@@ -232,7 +232,10 @@ function HostGameView({ room, onEndGame }: HostGameViewProps) {
       ) : (
         <p className="text-white/60">{t('games.loading')}</p>
       )}
-      <Button variant="secondary" onClick={onEndGame} className="mt-4">
+      {/* mt-auto pushes the End Game button to the viewport bottom so
+          game content (esp. Trivia's reveal leaderboard) doesn't crowd
+          into it on shorter screens. */}
+      <Button variant="secondary" onClick={onEndGame} className="mt-auto pt-2">
         {t('host.endGame')}
       </Button>
     </main>

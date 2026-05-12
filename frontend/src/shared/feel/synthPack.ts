@@ -209,7 +209,7 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
   writeStr('data');
   writeU32(dataLen);
   for (let i = 0; i < data.length; i++) {
-    const s = Math.max(-1, Math.min(1, data[i]));
+    const s = Math.max(-1, Math.min(1, data[i] ?? 0));
     view.setInt16(p, s < 0 ? s * 0x8000 : s * 0x7fff, true);
     p += 2;
   }

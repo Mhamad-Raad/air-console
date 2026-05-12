@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
@@ -275,10 +275,18 @@ function Finished({
   const myRank = ranked.findIndex((r) => r.playerId === meId);
   const myScore = view.yourScore ?? 0;
 
+  // Delay the FINAL SCORE panel so the Stinger overlay can play out
+  // without clipping into it on small phone viewports.
+  const [revealed, setRevealed] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setRevealed(true), 1600);
+    return () => window.clearTimeout(id);
+  }, []);
+
   return (
-    <div className="flex w-full flex-col items-center gap-4">
+    <div className="flex w-full flex-col items-center gap-4 pt-24">
       <Stinger
-        show
+        show={!revealed}
         text={myRank === 0 ? t('games.trivia.youWin') : t('games.trivia.gameOver')}
         subtext={
           myRank >= 0 ? t('games.trivia.youRank', { rank: myRank + 1 }) : undefined
