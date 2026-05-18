@@ -93,23 +93,29 @@ function pickPlay(view) {
 
 /**
  * Attach a permanent bot listener: whenever it's our turn during a playing
- * phase, play a legal tile or pass. Returns the underlying handler so the
- * caller can detach during teardown.
+ * phase, play a legal tile, draw from the boneyard, or pass. Returns the
+ * underlying handler so the caller can detach during teardown.
  */
 function attachBot(socket, getMyId) {
-  let acting = false;
+  // Fingerprint-gated: we only act on state updates we haven't seen yet,
+  // identified by board length + turn id + boneyard size. Drawing keeps the
+  // turn the same but shrinks the boneyard, so we include it in the key.
+  // A standalone `acting` flag isn't safe here — a state broadcast can
+  // arrive AFTER our send but BEFORE our ack, and gating on acting would
+  // skip the next genuine "your turn" window and deadlock the smoke.
+  let lastKey = '';
   const handler = async (payload) => {
-    if (acting) return;
     const view = payload.view;
     if (!view) return;
     if (view.phase !== 'playing') return;
     if (view.turn !== getMyId()) return;
-    acting = true;
+    const key = `${view.board.length}-${view.turn}-${view.boneyardCount ?? 0}-${(view.yourHand ?? []).length}`;
+    if (key === lastKey) return;
+    lastKey = key;
     try {
       if (view.canPlay) {
         const move = pickPlay(view);
         if (!move) {
-          // canPlay says yes but pickPlay failed — engine/bot disagree.
           console.error('bot disagreed with canPlay', { view });
           return;
         }
@@ -117,16 +123,13 @@ function attachBot(socket, getMyId) {
           type: 'play',
           data: { tile: [move.tile[0], move.tile[1]], side: move.side },
         });
+      } else if (view.canDraw) {
+        await emit(socket, ClientEvents.GameAction, { type: 'draw' });
       } else {
         await emit(socket, ClientEvents.GameAction, { type: 'pass' });
       }
     } catch (err) {
-      // Suppress trailing ack timeouts that fire during teardown — the bot
-      // may already be mid-emit when the room is closed and the socket
-      // stops receiving acks. While the socket is still up, log loudly.
       if (socket.connected) console.error('bot action failed', err);
-    } finally {
-      acting = false;
     }
   };
   socket.on(ServerEvents.GameState, handler);
