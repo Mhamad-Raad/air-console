@@ -7,10 +7,17 @@ import type { CSSProperties } from 'react';
 import { motion } from 'framer-motion';
 
 type Pip = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+/** Engine-authoritative tile: canonical low-then-high order. */
 export type TilePair = readonly [Pip, Pip];
+/**
+ * Loose tile shape the renderer accepts: any two numeric pip values, not
+ * necessarily in canonical order. Lets us flip tiles for display so the
+ * snake reads correctly without lying about the engine's invariant.
+ */
+export type RenderPair = readonly [number, number];
 
 export interface DominoTileProps {
-  tile: TilePair;
+  tile: TilePair | RenderPair;
   /** Long-axis direction. Doubles look right vertical; everything else horizontal. */
   orientation?: 'horizontal' | 'vertical';
   /** Pixel size of one half-square. A horizontal tile renders as 2S × S. */
@@ -196,10 +203,10 @@ export function DominoTile({
           />
 
           <g transform={`translate(${halfATranslate.x} ${halfATranslate.y})`}>
-            <Pips value={tile[0]} side={size} radius={pipR} />
+            <Pips value={tile[0] as Pip} side={size} radius={pipR} />
           </g>
           <g transform={`translate(${halfBTranslate.x} ${halfBTranslate.y})`}>
-            <Pips value={tile[1]} side={size} radius={pipR} />
+            <Pips value={tile[1] as Pip} side={size} radius={pipR} />
           </g>
         </>
       )}
