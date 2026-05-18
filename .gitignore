@@ -32,6 +32,14 @@ pnpm-debug.log*
 *.swp
 *.swo
 
+# Claude Code local settings + transcripts
+.claude/
+
+# Playwright E2E artifacts
+frontend/tests/e2e/screenshots/
+playwright-report/
+test-results/
+
 # OS
 .DS_Store
 Thumbs.db
