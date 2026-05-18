@@ -1,18 +1,25 @@
-// Dominos engine — server-authoritative, Block ruleset.
+// Dominos engine — server-authoritative, Block + Draw hybrid.
 //
 // State machine: playing → roundEnd → playing → ... → finished.
 //
 // Rules summary:
-// - Double-six set (28 tiles). Each player gets 7 tiles; leftover tiles
-//   sit out of play (no boneyard draw — pure Block).
+// - Double-six set (28 tiles). Each player gets 7 tiles; leftovers form
+//   the boneyard (2p → 14 boneyard, 3p → 7, 4p → 0).
 // - Player holding the highest double opens the round by playing it.
-// - On your turn, play any tile matching a chain end. If no legal play,
-//   you pass. If everyone passes in a row, the round is blocked.
+// - On your turn, play any tile matching a chain end, OR draw from the
+//   boneyard (Draw rule), OR pass — but pass is only legal when no
+//   playable tile exists in your hand AND the boneyard is empty.
+// - Drawing keeps the turn the same. The drawn tile is added to your hand;
+//   you can play it on the next action if it matches.
 // - Round ends when someone empties their hand (a "domino") OR the round
-//   is blocked. Round winner = empty-hand player; blocked round → lowest
-//   pip-sum player (ties → no winner this round, no points).
+//   is blocked (everyone in a row had to pass).
+// - Round winner = empty-hand player; blocked round → lowest pip-sum player
+//   (ties → no winner this round, no points).
 // - Winner's score increases by the sum of pips left in opponents' hands.
 // - Match ends when any player crosses targetScore (default 100).
+//
+// 4-player games have an empty boneyard, so the Draw branch is a no-op
+// and the game behaves exactly like classic Block.
 
 import type { GameEngine } from '../engine.js';
 import {
@@ -39,13 +46,17 @@ import type {
 const HAND_SIZE = 7;
 const DEFAULT_TARGET = 100;
 
-function dealHands(playerIds: string[], rng?: () => number): Record<string, Tile[]> {
+function dealHands(
+  playerIds: string[],
+  rng?: () => number,
+): { hands: Record<string, Tile[]>; boneyard: Tile[] } {
   const deck = shuffle(fullSet(), rng);
   const hands: Record<string, Tile[]> = {};
   for (let i = 0; i < playerIds.length; i++) {
     hands[playerIds[i]!] = deck.slice(i * HAND_SIZE, (i + 1) * HAND_SIZE);
   }
-  return hands;
+  const boneyard = deck.slice(playerIds.length * HAND_SIZE);
+  return { hands, boneyard };
 }
 
 /** Pick the opener: the player holding the highest available double.
@@ -178,12 +189,13 @@ function settleRound(state: DominosState, blocked: boolean): DominosState {
 }
 
 function startNextRound(state: DominosState): DominosState {
-  const hands = dealHands(state.playerIds);
+  const { hands, boneyard } = dealHands(state.playerIds);
   const opener = findOpener(hands, state.playerIds);
   return {
     ...state,
     phase: 'playing',
     hands,
+    boneyard,
     board: [],
     leftEnd: null,
     rightEnd: null,
@@ -200,7 +212,7 @@ export const DominosEngine: GameEngine<DominosState, DominosAction> = {
     if (playerIds.length < 2 || playerIds.length > 4) {
       throw new Error(`Dominos requires 2–4 players, got ${playerIds.length}`);
     }
-    const hands = dealHands(playerIds);
+    const { hands, boneyard } = dealHands(playerIds);
     const opener = findOpener(hands, playerIds);
     const scores: Record<string, number> = {};
     for (const id of playerIds) scores[id] = 0;
@@ -208,6 +220,7 @@ export const DominosEngine: GameEngine<DominosState, DominosAction> = {
       phase: 'playing',
       playerIds: [...playerIds],
       hands,
+      boneyard,
       board: [],
       leftEnd: null,
       rightEnd: null,
@@ -226,7 +239,14 @@ export const DominosEngine: GameEngine<DominosState, DominosAction> = {
     const a = action as DominosAction;
 
     if (a.type === 'continue') {
-      if (state.phase !== 'roundEnd') throw new Error('No round to continue');
+      // Idempotent on purpose: every controller schedules a `continue`
+      // when it enters roundEnd, and the first one to arrive wins. Later
+      // continues from peers (or duplicates from network retries) are
+      // silently absorbed instead of throwing, mirroring how trivia's
+      // `tick` is handled in this codebase. This lets any controller —
+      // not just playerIds[0] — drive the round transition, so a single
+      // disconnect doesn't strand the room.
+      if (state.phase !== 'roundEnd') return state;
       return startNextRound(state);
     }
 
@@ -235,9 +255,35 @@ export const DominosEngine: GameEngine<DominosState, DominosAction> = {
 
     const hand = state.hands[playerId] ?? [];
 
+    if (a.type === 'draw') {
+      // Drawing is only legal if there are still tiles in the boneyard
+      // and the player has no playable tile in hand. Otherwise we'd let
+      // a player stall indefinitely by drawing on every turn.
+      if (state.boneyard.length === 0) {
+        throw new Error('Boneyard is empty');
+      }
+      if (hasLegalPlay(hand, state)) {
+        throw new Error('You have a legal play — cannot draw');
+      }
+      const drawn = state.boneyard[0]!;
+      const newBoneyard = state.boneyard.slice(1);
+      const newHand = [...hand, drawn];
+      // The turn stays with the same player; they may now have a legal
+      // play (or may need to draw again / pass).
+      return {
+        ...state,
+        boneyard: newBoneyard,
+        hands: { ...state.hands, [playerId]: newHand },
+        passes: 0, // drawing isn't a pass; reset the blocked-round counter
+      };
+    }
+
     if (a.type === 'pass') {
       if (hasLegalPlay(hand, state)) {
         throw new Error('You have a legal play — cannot pass');
+      }
+      if (state.boneyard.length > 0) {
+        throw new Error('Draw from the boneyard before passing');
       }
       const passes = state.passes + 1;
       if (passes >= state.playerIds.length) {
@@ -251,6 +297,19 @@ export const DominosEngine: GameEngine<DominosState, DominosAction> = {
       const t = tile(a.data.tile[0], a.data.tile[1]);
       if (!hand.some((h) => tileEquals(h, t))) {
         throw new Error(`You do not hold tile ${t[0]}-${t[1]}`);
+      }
+      // Opener etiquette: when the board is empty (opening move), the
+      // starter is REQUIRED to play their highest double. The starter was
+      // picked precisely because they hold it; letting them open with
+      // anything else is a real rule break, not stylistic — every other
+      // hand was dealt assuming this constraint.
+      if (state.leftEnd === null) {
+        const required = highestDouble(hand);
+        if (required && !tileEquals(t, required)) {
+          throw new Error(
+            `Opener must play the highest double (${required[0]}-${required[1]})`,
+          );
+        }
       }
       if (state.leftEnd !== null && !matchesEnd(t, a.data.side === 'left' ? state.leftEnd : (state.rightEnd as number))) {
         throw new Error(`Tile does not match the ${a.data.side} end`);
@@ -317,6 +376,7 @@ function commonHeader(state: DominosState) {
     targetScore: state.targetScore,
     winnerId: state.winnerId,
     playerIds: state.playerIds,
+    boneyardCount: state.boneyard.length,
   };
 }
 
@@ -325,15 +385,20 @@ function projectPlayerView(state: DominosState, playerId: string) {
   const handCounts: Record<string, number> = {};
   for (const id of state.playerIds) handCounts[id] = (state.hands[id] ?? []).length;
 
-  const canPlay = state.turn === playerId && state.phase === 'playing'
-    ? hasLegalPlay(myHand, state)
-    : false;
+  const isMyTurn = state.turn === playerId && state.phase === 'playing';
+  const canPlay = isMyTurn ? hasLegalPlay(myHand, state) : false;
+  // Drawing is the only escape from a stuck hand when the boneyard isn't
+  // empty — surface that to the controller so it can offer the affordance.
+  const canDraw = isMyTurn && !canPlay && state.boneyard.length > 0;
+  const canPass = isMyTurn && !canPlay && state.boneyard.length === 0;
 
   return {
     ...commonHeader(state),
     yourHand: myHand,
     handCounts,
     canPlay,
+    canDraw,
+    canPass,
   };
 }
 

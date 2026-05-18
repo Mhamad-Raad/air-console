@@ -41,6 +41,13 @@ export interface DominosState {
   starterId: string | null;
   /** Consecutive passes; if it reaches playerIds.length, round is blocked. */
   passes: number;
+  /**
+   * Leftover tiles from the deal that haven't been picked up yet. In a
+   * 2-player game this starts with 14 tiles; 3-player has 7; 4-player has 0.
+   * The Draw rule lets a stuck player pull from here before being forced
+   * to pass. Empty → behaves like pure Block.
+   */
+  boneyard: Tile[];
   /** Cumulative match score per player; first to targetScore wins. */
   scores: Record<string, number>;
   /** Per-round summaries, in order. */
@@ -56,4 +63,5 @@ export type DominosAction =
       data: { tile: [number, number]; side: 'left' | 'right' };
     }
   | { type: 'pass'; data?: Record<string, never> }
+  | { type: 'draw'; data?: Record<string, never> }
   | { type: 'continue'; data?: Record<string, never> };
